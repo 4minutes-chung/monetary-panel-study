@@ -1,0 +1,2 @@
+rule,forbidden_set,proposed_set,violation,action
+forbidden_controls_in_gdp_models,gdp_pc_growth,"gdp_pc_growth, investment_share, pop_growth, trade_open",True,use_restricted_controls_excluding_gdp_pc_growth

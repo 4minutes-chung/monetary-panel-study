@@ -1,0 +1,6 @@
+criterion,value,threshold,pass,recommendation_if_fail
+preferred_first_stage_F_ge_10,9.468986079357803,>=10,False,GO_PIVOT_SHORT_RUN
+inflation_positive_sign_at_least_4_of_5,5,>=4,True,
+max_inflation_drift_lt_40pct,0.8750380400303696,<0.40,False,GO_PIVOT_SHORT_RUN
+gdp_effect_weak_all_core_specs,4/4,all p>=0.05,True,
+placebo_tests_not_significant,1,0 significant,False,GO_PIVOT_SHORT_RUN

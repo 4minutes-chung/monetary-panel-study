@@ -1,0 +1,25 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\title{Phase 1 Audit Short Report}
+\author{Steven Chung}
+\date{\today}
+\begin{document}
+\maketitle
+\section*{Recommendation}
+GO\_PIVOT\_SHORT\_RUN
+\section*{Scorecard}
+\begin{tabular}{p{7.2cm}p{2.5cm}p{2.0cm}p{1.2cm}}
+\toprule
+Criterion & Value & Threshold & Pass \\
+\midrule
+preferred\_first\_stage\_F\_ge\_10 & 9.468986079357803 & >=10 & False \\
+inflation\_positive\_sign\_at\_least\_4\_of\_5 & 5 & >=4 & True \\
+max\_inflation\_drift\_lt\_40pct & 0.8750380400303696 & <0.40 & False \\
+gdp\_effect\_weak\_all\_core\_specs & 4/4 & all p>=0.05 & True \\
+placebo\_tests\_not\_significant & 1 & 0 significant & False \\
+\bottomrule
+\end{tabular}
+\section*{Interpretation}
+This report is threshold-driven. If any criterion fails, the decision is GO\_PIVOT\_SHORT\_RUN.
+\end{document}

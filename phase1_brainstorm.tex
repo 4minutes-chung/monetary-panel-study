@@ -1,0 +1,161 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\title{P12B Macro Project: Forward Brainstorm (Option Map, Not Fixed Plan)}
+\author{Steven Chung}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Decision Rule (Hard Filter)}
+Continue only if an option satisfies both:
+\begin{enumerate}
+\item Strong portfolio signal for applied economist / economic data analyst roles.
+\item Realistic delivery in 14 days or less with stable execution.
+\end{enumerate}
+
+If either fails, stop or defer that branch.
+
+\section{Branch Map: All Meaningful Directions}
+
+\subsection{A. Identification and Causal Inference Branches}
+\textbf{A1. Country and year fixed effects (two-way FE)}
+\begin{itemize}
+\item Goal: absorb time-invariant country heterogeneity and global shocks.
+\item Value: standard baseline for panel credibility.
+\item Risk: still vulnerable to time-varying omitted variables and simultaneity.
+\end{itemize}
+
+\textbf{A2. FE plus controls}
+\begin{itemize}
+\item Add controls such as trade openness, fiscal proxy, financial depth, exchange-rate regime proxy if available.
+\item Value: better model defensibility in interviews.
+\item Risk: data collection burden and model instability if controls are weak/incomplete.
+\end{itemize}
+
+\textbf{A3. IV / 2SLS branch}
+\begin{itemize}
+\item Candidate idea set: external monetary pressure proxies, lagged external instruments, commodity-linked external shocks for suitable subsamples.
+\item Mandatory diagnostics: first-stage F, weak-IV robust inference, over-identification checks (if over-identified).
+\item Value: highest signal if instrument story is defensible.
+\item Risk: instrument validity is the main failure point.
+\end{itemize}
+
+\textbf{A4. Dynamic panel branch}
+\begin{itemize}
+\item Add lagged dependent variables and dynamic adjustment story.
+\item Value: closer to macro transmission logic.
+\item Risk: complexity rises quickly; easy to over-scope beyond 14 days.
+\end{itemize}
+
+\subsection{B. Robustness and Stress-Test Branches}
+\textbf{B1. Alternative variable definitions}
+\begin{itemize}
+\item Money proxy variants (M2 level growth vs ratio transformations).
+\item Inflation proxy variants (CPI-based alternatives where feasible).
+\item Value: demonstrates that findings are not a single-definition artifact.
+\end{itemize}
+
+\textbf{B2. Sample slicing}
+\begin{itemize}
+\item By period (pre/post major global events), income groups, inflation regimes.
+\item Value: strengthens external validity narrative.
+\item Risk: smaller cells reduce statistical power.
+\end{itemize}
+
+\textbf{B3. Outlier influence checks}
+\begin{itemize}
+\item Winsorization / robust regression / leave-one-country-out checks.
+\item Value: protects against ``single-country drives everything'' critique.
+\end{itemize}
+
+\subsection{C. Portfolio Productization Branches}
+\textbf{C1. Reproducible research package}
+\begin{itemize}
+\item One canonical notebook, one exported dataset, one methods note, one results note.
+\item Value: immediate hiring signal for execution quality.
+\end{itemize}
+
+\textbf{C2. Interview-facing one-pager}
+\begin{itemize}
+\item Problem, method choice, key result, caveat, business relevance.
+\item Value: high communication ROI.
+\end{itemize}
+
+\textbf{C3. Light dashboard/static chart sheet}
+\begin{itemize}
+\item Non-interactive static figures acceptable if consistent and clean.
+\item Value: faster than full app build; avoids over-engineering.
+\end{itemize}
+
+\subsection{D. Adjacent Extension Branches}
+\textbf{D1. Forecasting extension}
+\begin{itemize}
+\item Use money-growth information as one feature in inflation forecasting benchmarks.
+\item Value: links causal and predictive framing.
+\item Risk: can dilute core identification story if too broad.
+\end{itemize}
+
+\textbf{D2. Policy / risk memo variant}
+\begin{itemize}
+\item Convert findings into a short macro-risk interpretation memo.
+\item Value: direct relevance for risk and analytics roles.
+\end{itemize}
+
+\section{Portfolio Value Matrix (Initial Scoring)}
+Scale: High / Medium / Low.
+
+\begin{center}
+\begin{tabular}{p{4.0cm}p{2.0cm}p{2.0cm}p{2.2cm}p{3.2cm}}
+\toprule
+Option & Portfolio Signal & Causal Credibility & 14-Day Feasibility & Recommended Status \\
+\midrule
+Two-way FE baseline & High & Medium & High & Do first if continuing \\
+FE + controls & High & Medium-High & Medium & Do if data coverage is acceptable \\
+IV / 2SLS full branch & Very High & High (if valid) & Medium-Low & Do only with credible instrument story \\
+Dynamic panel & Medium-High & Medium & Low-Medium & Optional, only after FE core is stable \\
+Robustness pack (definitions + outliers + splits) & High & Medium-High & High & Strong 14-day candidate \\
+Reproducible package + one-pager & Very High & N/A & Very High & Mandatory for portfolio value \\
+Forecasting extension & Medium & Low-Medium & Medium & Secondary branch \\
+Policy/risk memo & High & N/A & High & Strong add-on after core results \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Practical Continue / Stop Triggers}
+\textbf{Continue} if within first 3 work sessions you can produce:
+\begin{itemize}
+\item A stable two-way FE result with interpretable sign/magnitude.
+\item At least two robustness checks that do not reverse the baseline story completely.
+\item One concise methods/results writeup usable in interview discussion.
+\end{itemize}
+
+\textbf{Stop or pivot} if any occurs:
+\begin{itemize}
+\item Instrument idea cannot be defended after quick validity check.
+\item Data merges for controls become a multiday bottleneck.
+\item Scope grows beyond 14-day cap without clear incremental portfolio gain.
+\end{itemize}
+
+\section{Minimal High-Value Path (if continuing)}
+This is not a fixed plan, but the highest expected-value branch under your filter:
+\begin{enumerate}
+\item Two-way FE baseline.
+\item Robustness pack (2 to 4 checks).
+\item Reproducible package plus one-page narrative.
+\item Optional IV add-on only if instrument quality survives fast diagnostics.
+\end{enumerate}
+
+\section{Open Idea Backlog (Uncommitted)}
+\begin{itemize}
+\item Heterogeneous effects by inflation regime.
+\item Event-window around major monetary regime changes.
+\item Country-clustered standard errors vs alternative clustering structures.
+\item Bayesian shrinkage variant for noisy country-level estimates.
+\item Alternative money aggregates if data quality permits.
+\end{itemize}
+
+\end{document}
