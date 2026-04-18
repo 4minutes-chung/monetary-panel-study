@@ -1,4 +1,23 @@
-
 # Python cache
 __pycache__/
 *.pyc
+.pytest_cache/
+
+# Notebook cache
+.ipynb_checkpoints/
+
+# Local OS noise
+.DS_Store
+
+# Local Node installs
+node_modules/
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+
+# Notebook-phase generated outputs
+outputs/notebook_phase0/
+outputs/notebook_phase1/
+outputs/notebook_phase2/
