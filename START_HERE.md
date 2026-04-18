@@ -50,4 +50,5 @@ Inflation association is robust across specifications, but causal interpretation
 ## 7. Legacy And Recovery Status
 
 - `outputs/phase1*` and `outputs/phase2_short_run*` are historical references, not canonical claim sources.
-- Legacy tracked notebook filenames are still in git triage state; see `RECOVERY_STEP0_GIT_TRIAGE.md` before destructive operations.
+- Legacy tracked notebooks have been archived under `archive/notebooks_legacy/` (history preserved).
+- Step 0 triage decision is recorded in `RECOVERY_STEP0_GIT_TRIAGE.md`.

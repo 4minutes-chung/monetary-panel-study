@@ -38,6 +38,15 @@ python3 v2/build_portfolio_graphs.py
 - Current cycle is notebook-first (`notebooks/phase_0*`, `phase_1*`, `phase_2*`) with script parity checks in `v2/`.
 - Legacy `outputs/phase*` artifacts are historical references only.
 
+## Repository Layout
+
+- Root keeps active run inputs (`macro_growth_merged.csv`, `m2_raw.csv`, `cpi_raw.csv`, `gdp_raw.csv`) and canonical docs.
+- `notebooks/` contains the 3-phase notebook story for Obj A and Obj B.
+- `v2/` contains script parity checks and portfolio graph generation.
+- `docs/legacy_notes/` stores older narrative notes kept for reference.
+- `archive/legacy_data/`, `archive/legacy_reports/`, `archive/references/`, and `archive/notebooks_legacy/` store historical materials moved out of root.
+- See `docs/REPO_LAYOUT.md` for the full post-cleanup map.
+
 ## Graphs
 
 ![Core coefficients](v2/outputs/portfolio_graphs/01_core_coefficients.png)

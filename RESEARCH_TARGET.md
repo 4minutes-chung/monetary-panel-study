@@ -105,9 +105,9 @@ Step 0 snapshot file:
 
 ### Step 3: Clean project structure
 
-- [ ] Separate research inputs, scripts, outputs, and deliverables clearly.
-- [ ] Move legacy generated artifacts to an archive folder if needed.
-- [ ] Ensure ignore rules match what should not be tracked.
+- [x] Separate research inputs, scripts, outputs, and deliverables clearly.
+- [x] Move legacy generated artifacts to an archive folder if needed.
+- [x] Ensure ignore rules match what should not be tracked.
 
 ### Step 4: Rebuild and verify
 
@@ -129,6 +129,5 @@ Step 0 snapshot file:
 ## 6. Immediate next actions
 
 1. Run the three new notebooks end-to-end and lock their outputs.
-2. Complete Step 0 git triage safely (legacy notebook restore/archive decision).
-3. Execute Step 3 structural cleanup after Step 0 decision.
-4. Finalize Step 6 package from canonical outputs.
+2. Validate notebook exports against v2 headline metrics.
+3. Finalize Step 6 package from canonical outputs.
