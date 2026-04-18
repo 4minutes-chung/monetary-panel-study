@@ -77,8 +77,8 @@ Canonical high-level outputs for this cycle:
 ### Step 0: Stabilize repository state
 
 - [x] Snapshot and classify current git changes into: keep, archive, drop.
-- [ ] Resolve accidental deletes and path anomalies before new edits.
-- [ ] Confirm one branch as active recovery branch.
+- [x] Resolve accidental deletes and path anomalies before new edits.
+- [x] Confirm one branch as active recovery branch.
 
 Step 0 snapshot file:
 
