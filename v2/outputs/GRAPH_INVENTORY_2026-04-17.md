@@ -1,0 +1,44 @@
+# Graph Inventory (Updated)
+
+## Current total
+25 chart/image outputs across this project tree.
+
+## By folder
+### `outputs/phase1/figures` (1)
+- `loco_inflation_coef_distribution.png`
+
+### `outputs/phase1_1/figures` (1)
+- `phase1_1_first_stage_strength.png`
+
+### `outputs/phase1_audit/figures` (2)
+- `first_stage_and_placebo_strength.png`
+- `stability_coefficients_gate.png`
+
+### `outputs/phase2_short_run/figures` (3)
+- `first_stage_by_horizon.png`
+- `irf_primary_gdp_growth.png`
+- `irf_primary_inflation.png`
+
+### `v2/outputs/phase1_audit_v2/figures` (2)
+- `first_stage_and_placebo_strength_v2.png`
+- `stability_coefficients_gate_v2.png`
+
+### `v2/outputs/phase2_short_run_v2/figures` (3)
+- `first_stage_by_horizon_v2.png`
+- `irf_primary_gdp_growth_v2.png`
+- `irf_primary_inflation_v2.png`
+
+### `v2/outputs/portfolio_graphs` (13)
+- `01_core_coefficients.png`
+- `02_first_stage_strength.png`
+- `03_gate_drift.png`
+- `04_stability_coefficients.png`
+- `05_placebo_strength.png`
+- `06_lp_inflation_paths.png`
+- `07_lp_gdp_h0_compare.png`
+- `08_lp_first_stage_horizon.png`
+- `09_missingness.png`
+- `10_scatter_m2_vs_inflation.png`
+- `11_scatter_m2_vs_gdp_growth.png`
+- `12_top20_mean_inflation.png`
+- `13_country_means_m2_vs_inflation.png`

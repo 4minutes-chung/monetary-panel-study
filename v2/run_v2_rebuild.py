@@ -1,614 +1,813 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 import warnings
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
 import statsmodels.formula.api as smf
-from linearmodels.panel import PanelOLS
 from linearmodels.iv import IV2SLS
+from linearmodels.panel import PanelOLS
 
-warnings.filterwarnings("ignore")
 sns.set_theme(style="whitegrid")
+warnings.filterwarnings(
+    "ignore",
+    message="invalid value encountered in sqrt",
+    category=RuntimeWarning,
+    module=r"linearmodels\.iv\.results",
+)
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-BASE_PATH = PROJECT_ROOT / "macro_growth_merged.csv"
-CTRL_PATH = PROJECT_ROOT / "data/phase1_controls.csv"
-IV_PATH = PROJECT_ROOT / "data/phase1_instruments.csv"
-REGION_MAP_PATH = PROJECT_ROOT / "v2/data/region_map_worldbank_2026-03-26.csv"
-M2_RAW_PATH = PROJECT_ROOT / "m2_raw.csv"
-
-OUT_ROOT = PROJECT_ROOT / "v2/outputs"
-OUT_AUDIT = OUT_ROOT / "phase1_audit_v2"
-OUT_AUDIT_T = OUT_AUDIT / "tables"
-OUT_AUDIT_F = OUT_AUDIT / "figures"
-OUT_LP = OUT_ROOT / "phase2_short_run_v2"
-OUT_LP_T = OUT_LP / "tables"
-OUT_LP_F = OUT_LP / "figures"
-
-for p in [OUT_ROOT, OUT_AUDIT, OUT_AUDIT_T, OUT_AUDIT_F, OUT_LP, OUT_LP_T, OUT_LP_F]:
-    p.mkdir(parents=True, exist_ok=True)
-
-LOG_LINES: list[str] = []
+RESTRICTED_CONTROLS = ["trade_open", "pop_growth", "investment_share"]
+PREFERRED_IV = "instrument_m2_external_level"
+CHI2_1_95_CRITICAL = 3.841458820694124
+STRONG_IV_STAT_THRESHOLD = 10.0
 
 
-def log(msg: str) -> None:
-    print(msg)
-    LOG_LINES.append(str(msg))
+@dataclass(frozen=True)
+class Paths:
+    project_root: Path
+    base_path: Path
+    controls_path: Path
+    iv_path: Path
+    region_map_path: Path
+    m2_raw_path: Path
+    out_root: Path
+    out_audit: Path
+    out_audit_tables: Path
+    out_audit_figures: Path
+    out_lp: Path
+    out_lp_tables: Path
+    out_lp_figures: Path
 
 
-for req in [BASE_PATH, CTRL_PATH, IV_PATH, REGION_MAP_PATH, M2_RAW_PATH]:
-    if not req.exists():
-        raise FileNotFoundError(f"Missing required input: {req}")
+def build_paths() -> Paths:
+    root = Path(__file__).resolve().parents[1]
+    out_root = root / "v2/outputs"
+    out_audit = out_root / "phase1_audit_v2"
+    out_lp = out_root / "phase2_short_run_v2"
+    return Paths(
+        project_root=root,
+        base_path=root / "macro_growth_merged.csv",
+        controls_path=root / "data/phase1_controls.csv",
+        iv_path=root / "data/phase1_instruments.csv",
+        region_map_path=root / "v2/data/region_map_worldbank_2026-03-26.csv",
+        m2_raw_path=root / "m2_raw.csv",
+        out_root=out_root,
+        out_audit=out_audit,
+        out_audit_tables=out_audit / "tables",
+        out_audit_figures=out_audit / "figures",
+        out_lp=out_lp,
+        out_lp_tables=out_lp / "tables",
+        out_lp_figures=out_lp / "figures",
+    )
 
-base = pd.read_csv(BASE_PATH)
-ctrl = pd.read_csv(CTRL_PATH)
-iv = pd.read_csv(IV_PATH)
 
-# Master merged panel used by both audit and LP stages.
-df = base.merge(ctrl, on=["Country Name", "year"], how="left")
-df = df.merge(iv, on=["Country Name", "year"], how="left")
-df = df.sort_values(["Country Name", "year"]).copy()
-
-restricted_controls = ["trade_open", "pop_growth", "investment_share"]
-
-# -----------------------------
-# Phase 1 Audit V2 (corrected)
-# -----------------------------
-
-audit_summary = pd.DataFrame(
-    [
-        {"check": "rows", "value": int(len(df))},
-        {"check": "countries", "value": int(df["Country Name"].nunique())},
-        {"check": "year_min", "value": int(df["year"].min())},
-        {"check": "year_max", "value": int(df["year"].max())},
-        {"check": "duplicate_country_year_rows", "value": int(df.duplicated(["Country Name", "year"]).sum())},
+def ensure_inputs(paths: Paths) -> None:
+    required = [
+        paths.base_path,
+        paths.controls_path,
+        paths.iv_path,
+        paths.region_map_path,
+        paths.m2_raw_path,
     ]
-)
-audit_summary.to_csv(OUT_AUDIT_T / "data_audit_summary_v2.csv", index=False)
-
-audit_missing = (
-    df[
-        [
-            "m2_growth",
-            "inflation",
-            "gdp_growth",
-            "trade_open",
-            "gdp_pc_growth",
-            "pop_growth",
-            "investment_share",
-            "instrument_m2_l1",
-            "instrument_m2_external_level",
-        ]
-    ]
-    .isna()
-    .sum()
-    .to_frame("missing_count")
-)
-audit_missing["missing_share"] = audit_missing["missing_count"] / len(df)
-audit_missing.reset_index().rename(columns={"index": "variable"}).to_csv(
-    OUT_AUDIT_T / "data_audit_missingness_v2.csv", index=False
-)
-
-forbidden_for_gdp = {"gdp_pc_growth"}
-proposed_controls = set(restricted_controls)
-leakage_flags = pd.DataFrame(
-    [
-        {
-            "rule": "forbidden_controls_in_gdp_models",
-            "forbidden_set": ", ".join(sorted(forbidden_for_gdp)),
-            "proposed_set": ", ".join(sorted(proposed_controls)),
-            "violation": bool(len(forbidden_for_gdp.intersection(proposed_controls)) > 0),
-            "action": "use_restricted_controls_excluding_gdp_pc_growth",
-        }
-    ]
-)
-leakage_flags.to_csv(OUT_AUDIT_T / "leakage_flags_v2.csv", index=False)
+    missing = [str(path) for path in required if not path.exists()]
+    if missing:
+        raise FileNotFoundError(f"Missing required inputs: {', '.join(missing)}")
 
 
-def fit_fe(df_in: pd.DataFrame, outcome: str, controls: list[str] | None = None):
+def ensure_output_dirs(paths: Paths) -> None:
+    for out_dir in [
+        paths.out_root,
+        paths.out_audit,
+        paths.out_audit_tables,
+        paths.out_audit_figures,
+        paths.out_lp,
+        paths.out_lp_tables,
+        paths.out_lp_figures,
+    ]:
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+
+def log(message: str, logs: list[str]) -> None:
+    print(message)
+    logs.append(message)
+
+
+def read_panel(paths: Paths, logs: list[str]) -> pd.DataFrame:
+    base = pd.read_csv(paths.base_path)
+    controls = pd.read_csv(paths.controls_path)
+    instruments = pd.read_csv(paths.iv_path)
+
+    panel = base.merge(controls, on=["Country Name", "year"], how="left")
+    panel = panel.merge(instruments, on=["Country Name", "year"], how="left")
+    panel = panel.sort_values(["Country Name", "year"]).copy()
+
+    log(
+        "Loaded panel with "
+        f"rows={len(panel)}, countries={panel['Country Name'].nunique()}, years={int(panel['year'].min())}-{int(panel['year'].max())}",
+        logs,
+    )
+    return panel
+
+
+def exact_horizon_series(
+    source_df: pd.DataFrame,
+    target_df: pd.DataFrame,
+    value_col: str,
+    horizon: int,
+    *,
+    entity_col: str = "Country Name",
+    time_col: str = "year",
+    out_col: str | None = None,
+) -> pd.Series:
+    """Return y_{t+h} aligned to row t using exact entity-year matching."""
+    if horizon < 0:
+        raise ValueError("horizon must be non-negative")
+
+    out_col = out_col or f"{value_col}_h{horizon}"
+    if horizon == 0:
+        return target_df[value_col].copy()
+
+    lookup = source_df[[entity_col, time_col, value_col]].dropna(subset=[value_col]).copy()
+    lookup[time_col] = lookup[time_col] - horizon
+    lookup = lookup.rename(columns={value_col: out_col}).drop_duplicates([entity_col, time_col], keep="last")
+
+    aligned = target_df[[entity_col, time_col]].merge(lookup, on=[entity_col, time_col], how="left")
+    return aligned[out_col]
+
+
+def fit_fe(panel: pd.DataFrame, outcome: str, controls: list[str] | None = None):
     controls = controls or []
-    cols = ["Country Name", "year", outcome, "m2_growth"] + controls
-    d = df_in[cols].dropna().copy()
-    d = d.set_index(["Country Name", "year"]).sort_index()
+    cols = ["Country Name", "year", outcome, "m2_growth", *controls]
+    fit_data = panel[cols].dropna().copy().set_index(["Country Name", "year"]).sort_index()
+
     rhs = "m2_growth"
     if controls:
-        rhs += " + " + " + ".join(controls)
+        rhs = rhs + " + " + " + ".join(controls)
+
     formula = f"{outcome} ~ 1 + {rhs} + EntityEffects + TimeEffects"
-    res = PanelOLS.from_formula(formula, data=d).fit(cov_type="clustered", cluster_entity=True)
-    return res, d
+    result = PanelOLS.from_formula(formula, data=fit_data).fit(cov_type="clustered", cluster_entity=True)
+    return result
 
 
-def fit_iv_twfe(df_in: pd.DataFrame, outcome: str, instrument: str, controls: list[str]):
-    cols = ["Country Name", "year", outcome, "m2_growth", instrument] + controls
-    d = df_in[cols].dropna().copy().rename(columns={"Country Name": "country"})
+def fit_iv_twfe(panel: pd.DataFrame, outcome: str, instrument: str, controls: list[str]):
+    cols = ["Country Name", "year", outcome, "m2_growth", instrument, *controls]
+    fit_data = panel[cols].dropna().copy().rename(columns={"Country Name": "country"})
+
     formula = f"{outcome} ~ 1"
     if controls:
-        formula += " + " + " + ".join(controls)
-    formula += f" + C(country) + C(year) [m2_growth ~ {instrument}]"
-    res = IV2SLS.from_formula(formula, data=d).fit(cov_type="clustered", clusters=d["country"])
-    return res, d
+        formula = formula + " + " + " + ".join(controls)
+    formula = formula + f" + C(country) + C(year) [m2_growth ~ {instrument}]"
+
+    result = IV2SLS.from_formula(formula, data=fit_data).fit(cov_type="clustered", clusters=fit_data["country"])
+    return result, fit_data
 
 
-def first_stage_row(iv_res, instrument: str, outcome: str):
-    diag = iv_res.first_stage.diagnostics.loc["m2_growth"]
+def extract_first_stage(result, instrument: str, outcome: str) -> dict:
+    diagnostics = result.first_stage.diagnostics.loc["m2_growth"]
     return {
         "instrument": instrument,
         "outcome": outcome,
-        "first_stage_stat": float(diag["f.stat"]),
-        "first_stage_p": float(diag["f.pval"]),
-        "partial_rsquared": float(diag["partial.rsquared"]),
-        "shea_rsquared": float(diag["shea.rsquared"]),
-        "dist": str(diag["f.dist"]),
+        "first_stage_stat": float(diagnostics["f.stat"]),
+        "first_stage_p": float(diagnostics["f.pval"]),
+        "partial_rsquared": float(diagnostics["partial.rsquared"]),
+        "shea_rsquared": float(diagnostics["shea.rsquared"]),
+        "dist": str(diagnostics["f.dist"]),
     }
 
 
-core_rows: list[dict] = []
-first_stage_rows: list[dict] = []
-
-# FE baseline
-for outcome in ["inflation", "gdp_growth"]:
-    res, d_used = fit_fe(df, outcome, controls=[])
-    core_rows.append(
+def int_cluster_columns(df: pd.DataFrame) -> pd.DataFrame:
+    return pd.DataFrame(
         {
-            "model": "fe_baseline_twfe",
-            "outcome": outcome,
-            "spec": "core",
-            "coef_m2_growth": float(res.params["m2_growth"]),
-            "std_error_m2_growth": float(res.std_errors["m2_growth"]),
-            "p_value_m2_growth": float(res.pvalues["m2_growth"]),
-            "nobs": int(res.nobs),
-            "r2_within": float(res.rsquared_within),
+            "country": pd.factorize(df["country"])[0],
+            "year": pd.factorize(df["year"])[0],
+        },
+        index=df.index,
+    )
+
+
+def run_placebo_tests(panel: pd.DataFrame) -> pd.DataFrame:
+    lead_base = panel[["Country Name", "year", "m2_growth", *RESTRICTED_CONTROLS]].copy()
+    lead_base["instrument_lead"] = exact_horizon_series(
+        source_df=panel,
+        target_df=lead_base,
+        value_col=PREFERRED_IV,
+        horizon=1,
+        out_col="instrument_lead",
+    )
+    lead_data = lead_base.dropna(subset=["m2_growth", "instrument_lead", *RESTRICTED_CONTROLS]).copy()
+    lead_data = lead_data.sort_values(["Country Name", "year"]).rename(columns={"Country Name": "country"})
+
+    lead_fit = smf.ols(
+        "m2_growth ~ instrument_lead + " + " + ".join(RESTRICTED_CONTROLS) + " + C(country) + C(year)",
+        data=lead_data,
+    ).fit(cov_type="cluster", cov_kwds={"groups": lead_data["country"]})
+
+    perm_data = panel[["Country Name", "year", "m2_growth", PREFERRED_IV, *RESTRICTED_CONTROLS]].dropna().copy()
+    perm_data = perm_data.rename(columns={"Country Name": "country"})
+
+    rng = np.random.default_rng(42)
+    countries = np.array(sorted(perm_data["country"].unique()))
+    shuffled = countries.copy()
+    rng.shuffle(shuffled)
+    perm_map = dict(zip(countries, shuffled))
+
+    perm_data["country_perm"] = perm_data["country"].map(perm_map)
+    lookup = perm_data[["country", "year", PREFERRED_IV]].rename(
+        columns={"country": "country_perm", PREFERRED_IV: "instrument_perm"}
+    )
+    perm_data = perm_data.merge(lookup, on=["country_perm", "year"], how="left").dropna(subset=["instrument_perm"])
+
+    perm_fit = smf.ols(
+        "m2_growth ~ instrument_perm + " + " + ".join(RESTRICTED_CONTROLS) + " + C(country) + C(year)",
+        data=perm_data,
+    ).fit(cov_type="cluster", cov_kwds={"groups": perm_data["country"]})
+
+    return pd.DataFrame(
+        [
+            {
+                "test": "lead_placebo",
+                "coef": float(lead_fit.params["instrument_lead"]),
+                "p_value": float(lead_fit.pvalues["instrument_lead"]),
+                "stat_t_abs": float(abs(lead_fit.tvalues["instrument_lead"])),
+                "stat_t2": float(lead_fit.tvalues["instrument_lead"] ** 2),
+                "nobs": int(lead_fit.nobs),
+            },
+            {
+                "test": "permutation_placebo",
+                "coef": float(perm_fit.params["instrument_perm"]),
+                "p_value": float(perm_fit.pvalues["instrument_perm"]),
+                "stat_t_abs": float(abs(perm_fit.tvalues["instrument_perm"])),
+                "stat_t2": float(perm_fit.tvalues["instrument_perm"] ** 2),
+                "nobs": int(perm_fit.nobs),
+            },
+        ]
+    )
+
+
+def run_stability_checks(panel: pd.DataFrame, baseline_coef: float, paths: Paths, logs: list[str]) -> pd.DataFrame:
+    rows: list[dict] = []
+
+    tail_cutoff = panel["inflation"].quantile(0.99)
+    tail_result = fit_fe(panel[panel["inflation"] <= tail_cutoff].copy(), "inflation", controls=[])
+    rows.append(
+        {
+            "spec": "tail_exclusion_99pct",
+            "coef": float(tail_result.params["m2_growth"]),
+            "p_value": float(tail_result.pvalues["m2_growth"]),
+            "nobs": int(tail_result.nobs),
         }
     )
 
-# FE + restricted controls
-for outcome in ["inflation", "gdp_growth"]:
-    res, d_used = fit_fe(df, outcome, controls=restricted_controls)
-    core_rows.append(
-        {
-            "model": "fe_controls_restricted_twfe",
-            "outcome": outcome,
-            "spec": "core",
-            "coef_m2_growth": float(res.params["m2_growth"]),
-            "std_error_m2_growth": float(res.std_errors["m2_growth"]),
-            "p_value_m2_growth": float(res.pvalues["m2_growth"]),
-            "nobs": int(res.nobs),
-            "r2_within": float(res.rsquared_within),
-        }
+    for lower, upper, name in [(1991, 2005, "period_1991_2005"), (2006, 2020, "period_2006_2020")]:
+        split = panel[(panel["year"] >= lower) & (panel["year"] <= upper)].copy()
+        split_result = fit_fe(split, "inflation", controls=[])
+        rows.append(
+            {
+                "spec": name,
+                "coef": float(split_result.params["m2_growth"]),
+                "p_value": float(split_result.pvalues["m2_growth"]),
+                "nobs": int(split_result.nobs),
+            }
+        )
+
+    region_map = pd.read_csv(paths.region_map_path)
+    name_code = pd.read_csv(paths.m2_raw_path, skiprows=4)[["Country Name", "Country Code"]].drop_duplicates()
+    with_regions = panel.merge(name_code, on="Country Name", how="left")
+    with_regions = with_regions.merge(region_map[["Country Code", "region"]], on="Country Code", how="left")
+
+    regions = [
+        region
+        for region in sorted(with_regions["region"].dropna().unique().tolist())
+        if region.strip().lower() != "aggregates"
+    ]
+
+    for region in regions:
+        subset = with_regions[with_regions["region"] != region].copy()
+        try:
+            result = fit_fe(subset, "inflation", controls=[])
+            rows.append(
+                {
+                    "spec": f"leave_out_region::{region}",
+                    "coef": float(result.params["m2_growth"]),
+                    "p_value": float(result.pvalues["m2_growth"]),
+                    "nobs": int(result.nobs),
+                }
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            log(f"Region leave-out failed for {region}: {exc}", logs)
+
+    stability = pd.DataFrame(rows)
+    stability["baseline_coef"] = baseline_coef
+    stability["abs_drift_pct"] = (stability["coef"] - baseline_coef).abs() / (
+        abs(baseline_coef) if abs(baseline_coef) > 1e-8 else np.nan
+    )
+    return stability
+
+
+def build_phase1_audit(panel: pd.DataFrame, paths: Paths, logs: list[str]) -> dict:
+    audit_summary = pd.DataFrame(
+        [
+            {"check": "rows", "value": int(len(panel))},
+            {"check": "countries", "value": int(panel["Country Name"].nunique())},
+            {"check": "year_min", "value": int(panel["year"].min())},
+            {"check": "year_max", "value": int(panel["year"].max())},
+            {"check": "duplicate_country_year_rows", "value": int(panel.duplicated(["Country Name", "year"]).sum())},
+        ]
+    )
+    audit_summary.to_csv(paths.out_audit_tables / "data_audit_summary_v2.csv", index=False)
+
+    missing_table = (
+        panel[
+            [
+                "m2_growth",
+                "inflation",
+                "gdp_growth",
+                "trade_open",
+                "gdp_pc_growth",
+                "pop_growth",
+                "investment_share",
+                "instrument_m2_l1",
+                "instrument_m2_external_level",
+            ]
+        ]
+        .isna()
+        .sum()
+        .to_frame("missing_count")
+    )
+    missing_table["missing_share"] = missing_table["missing_count"] / len(panel)
+    missing_table.reset_index().rename(columns={"index": "variable"}).to_csv(
+        paths.out_audit_tables / "data_audit_missingness_v2.csv", index=False
     )
 
-# IV core models + first-stage diagnostics extracted from same fitted model
-for instrument, model_name in [
-    ("instrument_m2_l1", "iv_twfe_lag"),
-    ("instrument_m2_external_level", "iv_twfe_external"),
-]:
+    forbidden = {"gdp_pc_growth"}
+    proposed = set(RESTRICTED_CONTROLS)
+    leakage_flags = pd.DataFrame(
+        [
+            {
+                "rule": "forbidden_controls_in_gdp_models",
+                "forbidden_set": ", ".join(sorted(forbidden)),
+                "proposed_set": ", ".join(sorted(proposed)),
+                "violation": bool(forbidden.intersection(proposed)),
+                "action": "use_restricted_controls_excluding_gdp_pc_growth",
+            }
+        ]
+    )
+    leakage_flags.to_csv(paths.out_audit_tables / "leakage_flags_v2.csv", index=False)
+
+    core_rows: list[dict] = []
+    first_stage_rows: list[dict] = []
+
     for outcome in ["inflation", "gdp_growth"]:
-        res, d_used = fit_iv_twfe(df, outcome, instrument=instrument, controls=restricted_controls)
-        fs = first_stage_row(res, instrument=instrument, outcome=outcome)
-        first_stage_rows.append({"model": model_name, **fs, "nobs": int(res.nobs)})
+        baseline = fit_fe(panel, outcome, controls=[])
         core_rows.append(
             {
-                "model": model_name,
+                "model": "fe_baseline_twfe",
                 "outcome": outcome,
                 "spec": "core",
-                "coef_m2_growth": float(res.params["m2_growth"]),
-                "std_error_m2_growth": float(res.std_errors["m2_growth"]),
-                "p_value_m2_growth": float(res.pvalues["m2_growth"]),
-                "nobs": int(res.nobs),
-                "r2": float(res.rsquared),
-                "first_stage_stat": float(fs["first_stage_stat"]),
-                "first_stage_p": float(fs["first_stage_p"]),
-                "partial_rsquared": float(fs["partial_rsquared"]),
+                "coef_m2_growth": float(baseline.params["m2_growth"]),
+                "std_error_m2_growth": float(baseline.std_errors["m2_growth"]),
+                "p_value_m2_growth": float(baseline.pvalues["m2_growth"]),
+                "nobs": int(baseline.nobs),
+                "r2_within": float(baseline.rsquared_within),
             }
         )
 
-core_tbl = pd.DataFrame(core_rows)
-core_tbl.to_csv(OUT_AUDIT_T / "core_model_results_v2.csv", index=False)
-first_stage_tbl = pd.DataFrame(first_stage_rows)
-first_stage_tbl.to_csv(OUT_AUDIT_T / "first_stage_strength_v2.csv", index=False)
+        controlled = fit_fe(panel, outcome, controls=RESTRICTED_CONTROLS)
+        core_rows.append(
+            {
+                "model": "fe_controls_restricted_twfe",
+                "outcome": outcome,
+                "spec": "core",
+                "coef_m2_growth": float(controlled.params["m2_growth"]),
+                "std_error_m2_growth": float(controlled.std_errors["m2_growth"]),
+                "p_value_m2_growth": float(controlled.pvalues["m2_growth"]),
+                "nobs": int(controlled.nobs),
+                "r2_within": float(controlled.rsquared_within),
+            }
+        )
 
-# Placebo tests with clustered SE
-preferred_iv = "instrument_m2_external_level"
-rng = np.random.default_rng(42)
+    for instrument, model_name in [
+        ("instrument_m2_l1", "iv_twfe_lag"),
+        ("instrument_m2_external_level", "iv_twfe_external"),
+    ]:
+        for outcome in ["inflation", "gdp_growth"]:
+            iv_result, iv_data = fit_iv_twfe(panel, outcome=outcome, instrument=instrument, controls=RESTRICTED_CONTROLS)
+            first_stage = extract_first_stage(iv_result, instrument=instrument, outcome=outcome)
+            first_stage_rows.append({"model": model_name, **first_stage, "nobs": int(iv_result.nobs)})
+            core_rows.append(
+                {
+                    "model": model_name,
+                    "outcome": outcome,
+                    "spec": "core",
+                    "coef_m2_growth": float(iv_result.params["m2_growth"]),
+                    "std_error_m2_growth": float(iv_result.std_errors["m2_growth"]),
+                    "p_value_m2_growth": float(iv_result.pvalues["m2_growth"]),
+                    "nobs": int(iv_result.nobs),
+                    "r2": float(iv_result.rsquared),
+                    "first_stage_stat": float(first_stage["first_stage_stat"]),
+                    "first_stage_p": float(first_stage["first_stage_p"]),
+                    "partial_rsquared": float(first_stage["partial_rsquared"]),
+                }
+            )
 
-lead_data = df[["Country Name", "year", "m2_growth", preferred_iv] + restricted_controls].dropna().copy()
-lead_data = lead_data.sort_values(["Country Name", "year"]).rename(columns={"Country Name": "country"})
-lead_data["instrument_lead"] = lead_data.groupby("country")[preferred_iv].shift(-1)
-lead_data = lead_data.dropna(subset=["instrument_lead"])
-lead_fit = smf.ols(
-    "m2_growth ~ instrument_lead + " + " + ".join(restricted_controls) + " + C(country) + C(year)",
-    data=lead_data,
-).fit(cov_type="cluster", cov_kwds={"groups": lead_data["country"]})
+    core_table = pd.DataFrame(core_rows)
+    first_stage_table = pd.DataFrame(first_stage_rows)
+    core_table.to_csv(paths.out_audit_tables / "core_model_results_v2.csv", index=False)
+    first_stage_table.to_csv(paths.out_audit_tables / "first_stage_strength_v2.csv", index=False)
 
-perm_data = df[["Country Name", "year", "m2_growth", preferred_iv] + restricted_controls].dropna().copy()
-perm_data = perm_data.rename(columns={"Country Name": "country"})
-all_countries = np.array(sorted(perm_data["country"].unique()))
-shuffled = all_countries.copy()
-rng.shuffle(shuffled)
-country_map = dict(zip(all_countries, shuffled))
-perm_data["country_perm"] = perm_data["country"].map(country_map)
-lookup = perm_data[["country", "year", preferred_iv]].rename(
-    columns={"country": "country_perm", preferred_iv: "instrument_perm"}
-)
-perm_data = perm_data.merge(lookup, on=["country_perm", "year"], how="left").dropna(subset=["instrument_perm"])
-perm_fit = smf.ols(
-    "m2_growth ~ instrument_perm + " + " + ".join(restricted_controls) + " + C(country) + C(year)",
-    data=perm_data,
-).fit(cov_type="cluster", cov_kwds={"groups": perm_data["country"]})
+    placebo_table = run_placebo_tests(panel)
+    placebo_table.to_csv(paths.out_audit_tables / "placebo_tests_v2.csv", index=False)
 
-placebo_tbl = pd.DataFrame(
-    [
-        {
-            "test": "lead_placebo",
-            "coef": float(lead_fit.params["instrument_lead"]),
-            "p_value": float(lead_fit.pvalues["instrument_lead"]),
-            "stat_t_abs": float(abs(lead_fit.tvalues["instrument_lead"])),
-            "stat_t2": float(lead_fit.tvalues["instrument_lead"] ** 2),
-            "nobs": int(lead_fit.nobs),
-        },
-        {
-            "test": "permutation_placebo",
-            "coef": float(perm_fit.params["instrument_perm"]),
-            "p_value": float(perm_fit.pvalues["instrument_perm"]),
-            "stat_t_abs": float(abs(perm_fit.tvalues["instrument_perm"])),
-            "stat_t2": float(perm_fit.tvalues["instrument_perm"] ** 2),
-            "nobs": int(perm_fit.nobs),
-        },
-    ]
-)
-placebo_tbl.to_csv(OUT_AUDIT_T / "placebo_tests_v2.csv", index=False)
+    baseline_inflation = float(
+        core_table.loc[
+            (core_table["model"] == "fe_baseline_twfe") & (core_table["outcome"] == "inflation"),
+            "coef_m2_growth",
+        ].iloc[0]
+    )
+    stability_table = run_stability_checks(panel, baseline_coef=baseline_inflation, paths=paths, logs=logs)
+    stability_table.to_csv(paths.out_audit_tables / "spec_stability_table_v2.csv", index=False)
 
-# Stability checks
-stab_rows: list[dict] = []
-baseline_coef = float(
-    core_tbl.loc[
-        (core_tbl["model"] == "fe_baseline_twfe") & (core_tbl["outcome"] == "inflation"),
-        "coef_m2_growth",
+    def get_core(model: str, metric: str) -> float:
+        return float(
+            core_table.loc[
+                (core_table["model"] == model) & (core_table["outcome"] == "inflation"),
+                metric,
+            ].iloc[0]
+        )
+
+    def get_stability(spec: str, metric: str) -> float:
+        return float(stability_table.loc[stability_table["spec"] == spec, metric].iloc[0])
+
+    gate_table = pd.DataFrame(
+        [
+            {"spec": "fe_baseline_twfe", "coef": get_core("fe_baseline_twfe", "coef_m2_growth"), "p_value": get_core("fe_baseline_twfe", "p_value_m2_growth")},
+            {
+                "spec": "fe_controls_restricted_twfe",
+                "coef": get_core("fe_controls_restricted_twfe", "coef_m2_growth"),
+                "p_value": get_core("fe_controls_restricted_twfe", "p_value_m2_growth"),
+            },
+            {"spec": "iv_twfe_external", "coef": get_core("iv_twfe_external", "coef_m2_growth"), "p_value": get_core("iv_twfe_external", "p_value_m2_growth")},
+            {"spec": "period_1991_2005", "coef": get_stability("period_1991_2005", "coef"), "p_value": get_stability("period_1991_2005", "p_value")},
+            {"spec": "period_2006_2020", "coef": get_stability("period_2006_2020", "coef"), "p_value": get_stability("period_2006_2020", "p_value")},
+        ]
+    )
+    gate_table["abs_drift_pct"] = (gate_table["coef"] - baseline_inflation).abs() / (
+        abs(baseline_inflation) if abs(baseline_inflation) > 1e-8 else np.nan
+    )
+    gate_table.to_csv(paths.out_audit_tables / "spec_gate_table_v2.csv", index=False)
+
+    preferred_row = first_stage_table.loc[
+        (first_stage_table["instrument"] == PREFERRED_IV) & (first_stage_table["outcome"] == "inflation")
     ].iloc[0]
-)
+    preferred_stat = float(preferred_row["first_stage_stat"])
+    preferred_p = float(preferred_row["first_stage_p"])
 
-# Tail exclusion
-tail_cut = df["inflation"].quantile(0.99)
-r_tail, _ = fit_fe(df[df["inflation"] <= tail_cut].copy(), "inflation", controls=[])
-stab_rows.append(
-    {
-        "spec": "tail_exclusion_99pct",
-        "coef": float(r_tail.params["m2_growth"]),
-        "p_value": float(r_tail.pvalues["m2_growth"]),
-        "nobs": int(r_tail.nobs),
-    }
-)
+    gdp_core = core_table[core_table["outcome"] == "gdp_growth"].copy()
+    placebo_significant = int((placebo_table["p_value"] < 0.05).sum())
 
-# Period splits
-for lo, hi, nm in [(1991, 2005, "period_1991_2005"), (2006, 2020, "period_2006_2020")]:
-    d_split = df[(df["year"] >= lo) & (df["year"] <= hi)].copy()
-    r, _ = fit_fe(d_split, "inflation", controls=[])
-    stab_rows.append(
-        {
-            "spec": nm,
-            "coef": float(r.params["m2_growth"]),
-            "p_value": float(r.pvalues["m2_growth"]),
-            "nobs": int(r.nobs),
-        }
+    scorecard = pd.DataFrame(
+        [
+            {
+                "criterion": "preferred_first_stage_stat_gt_chi2_95",
+                "value": preferred_stat,
+                "threshold": f">{CHI2_1_95_CRITICAL:.4f}",
+                "pass": bool(preferred_stat > CHI2_1_95_CRITICAL),
+            },
+            {
+                "criterion": "preferred_first_stage_stat_ge_10_for_strong_iv",
+                "value": preferred_stat,
+                "threshold": f">={STRONG_IV_STAT_THRESHOLD:.1f}",
+                "pass": bool(preferred_stat >= STRONG_IV_STAT_THRESHOLD),
+            },
+            {
+                "criterion": "preferred_first_stage_p_lt_0p05",
+                "value": preferred_p,
+                "threshold": "<0.05",
+                "pass": bool(preferred_p < 0.05),
+            },
+            {
+                "criterion": "inflation_positive_sign_at_least_4_of_5",
+                "value": int((gate_table["coef"] > 0).sum()),
+                "threshold": ">=4",
+                "pass": bool((gate_table["coef"] > 0).sum() >= 4),
+            },
+            {
+                "criterion": "max_inflation_drift_lt_40pct",
+                "value": float(gate_table["abs_drift_pct"].max()),
+                "threshold": "<0.40",
+                "pass": bool(gate_table["abs_drift_pct"].max() < 0.40),
+            },
+            {
+                "criterion": "gdp_effect_weak_all_core_specs",
+                "value": f"{int((gdp_core['p_value_m2_growth'] >= 0.05).sum())}/{int(len(gdp_core))}",
+                "threshold": "all p>=0.05",
+                "pass": bool((gdp_core["p_value_m2_growth"] >= 0.05).all()),
+            },
+            {
+                "criterion": "placebo_tests_not_significant",
+                "value": placebo_significant,
+                "threshold": "0 significant",
+                "pass": bool(placebo_significant == 0),
+            },
+        ]
     )
 
-# Leave-one-region-out (ALL regions, no cap)
-region_map = pd.read_csv(REGION_MAP_PATH)
-name_code = pd.read_csv(M2_RAW_PATH, skiprows=4)[["Country Name", "Country Code"]].drop_duplicates()
-d_reg = (
-    df.merge(name_code, on="Country Name", how="left")
-    .merge(region_map[["Country Code", "region"]], on="Country Code", how="left")
-)
-regions = [
-    x
-    for x in sorted(d_reg["region"].dropna().unique().tolist())
-    if x.strip().lower() != "aggregates"
-]
-for rg in regions:
-    sub = d_reg[d_reg["region"] != rg].copy()
-    try:
-        r, _ = fit_fe(sub, "inflation", controls=[])
-        stab_rows.append(
+    recommendation = "GO_CONTINUE" if bool(scorecard["pass"].all()) else "GO_PIVOT_SHORT_RUN"
+    scorecard["recommendation_if_fail"] = np.where(scorecard["pass"], "", "GO_PIVOT_SHORT_RUN")
+    scorecard.to_csv(paths.out_audit_tables / "audit_scorecard_v2.csv", index=False)
+
+    powerbi_core = core_table.copy()
+    powerbi_core["abs_coef"] = powerbi_core["coef_m2_growth"].abs()
+    powerbi_core["is_significant_5pct"] = powerbi_core["p_value_m2_growth"] < 0.05
+    powerbi_core["recommendation"] = recommendation
+    powerbi_core.to_csv(paths.out_audit_tables / "powerbi_model_summary_v2.csv", index=False)
+
+    # Inference sensitivity snapshot (one-way vs two-way cluster on key specs)
+    iv_core_data = panel[["Country Name", "year", "inflation", "m2_growth", PREFERRED_IV, *RESTRICTED_CONTROLS]].dropna().copy()
+    iv_core_data = iv_core_data.rename(columns={"Country Name": "country"})
+    core_formula = (
+        "inflation ~ 1 + "
+        + " + ".join(RESTRICTED_CONTROLS)
+        + f" + C(country) + C(year) [m2_growth ~ {PREFERRED_IV}]"
+    )
+    one_way = IV2SLS.from_formula(core_formula, data=iv_core_data).fit(cov_type="clustered", clusters=iv_core_data["country"])
+    two_way = IV2SLS.from_formula(core_formula, data=iv_core_data).fit(
+        cov_type="clustered", clusters=int_cluster_columns(iv_core_data)
+    )
+
+    sensitivity = pd.DataFrame(
+        [
             {
-                "spec": f"leave_out_region::{rg}",
-                "coef": float(r.params["m2_growth"]),
-                "p_value": float(r.pvalues["m2_growth"]),
-                "nobs": int(r.nobs),
-            }
-        )
-    except Exception as e:
-        log(f"Region leave-out failed for {rg}: {e}")
+                "check": "core_iv_inflation_first_stage",
+                "clustering": "country",
+                "first_stage_stat": float(one_way.first_stage.diagnostics.loc["m2_growth", "f.stat"]),
+                "first_stage_p": float(one_way.first_stage.diagnostics.loc["m2_growth", "f.pval"]),
+                "coef": float(one_way.params["m2_growth"]),
+                "p_value": float(one_way.pvalues["m2_growth"]),
+            },
+            {
+                "check": "core_iv_inflation_first_stage",
+                "clustering": "country_year",
+                "first_stage_stat": float(two_way.first_stage.diagnostics.loc["m2_growth", "f.stat"]),
+                "first_stage_p": float(two_way.first_stage.diagnostics.loc["m2_growth", "f.pval"]),
+                "coef": float(two_way.params["m2_growth"]),
+                "p_value": float(two_way.pvalues["m2_growth"]),
+            },
+        ]
+    )
+    sensitivity.to_csv(paths.out_audit_tables / "inference_sensitivity_v2.csv", index=False)
 
-stab_tbl = pd.DataFrame(stab_rows)
-stab_tbl["baseline_coef"] = baseline_coef
-stab_tbl["abs_drift_pct"] = (stab_tbl["coef"] - baseline_coef).abs() / (
-    abs(baseline_coef) if abs(baseline_coef) > 1e-8 else np.nan
-)
-stab_tbl.to_csv(OUT_AUDIT_T / "spec_stability_table_v2.csv", index=False)
+    # Audit figures
+    fig, ax = plt.subplots(figsize=(9, 4))
+    sns.barplot(data=gate_table, x="spec", y="coef", ax=ax)
+    ax.axhline(0, color="black", linewidth=1)
+    ax.axhline(baseline_inflation, color="red", linestyle="--", label="Baseline FE coef")
+    ax.set_title("V2 Inflation Coefficient Across Gate Specs")
+    ax.set_ylabel("Coefficient on m2_growth")
+    ax.tick_params(axis="x", rotation=25)
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(paths.out_audit_figures / "stability_coefficients_gate_v2.png", dpi=170)
+    plt.close(fig)
 
-# Gate table (same 5 specs)
-get_core = lambda m: float(
-    core_tbl.loc[
-        (core_tbl["model"] == m) & (core_tbl["outcome"] == "inflation"),
-        "coef_m2_growth",
-    ].iloc[0]
-)
-get_core_p = lambda m: float(
-    core_tbl.loc[
-        (core_tbl["model"] == m) & (core_tbl["outcome"] == "inflation"),
-        "p_value_m2_growth",
-    ].iloc[0]
-)
+    fig2, ax2 = plt.subplots(figsize=(9, 4))
+    fs_plot = first_stage_table[["instrument", "first_stage_stat"]].drop_duplicates().rename(
+        columns={"first_stage_stat": "value"}
+    )
+    fs_plot["metric"] = "first_stage_stat"
+    placebo_plot = placebo_table[["test", "stat_t2"]].rename(columns={"test": "instrument", "stat_t2": "value"})
+    placebo_plot["metric"] = "placebo_t2"
+    combo = pd.concat(
+        [fs_plot[["instrument", "value", "metric"]], placebo_plot[["instrument", "value", "metric"]]],
+        ignore_index=True,
+    )
+    sns.barplot(data=combo, x="instrument", y="value", hue="metric", ax=ax2)
+    ax2.axhline(CHI2_1_95_CRITICAL, color="red", linestyle="--", label="chi2(1) 95% critical")
+    ax2.set_title("V2 First-Stage and Placebo Diagnostics")
+    ax2.tick_params(axis="x", rotation=20)
+    ax2.legend()
+    fig2.tight_layout()
+    fig2.savefig(paths.out_audit_figures / "first_stage_and_placebo_strength_v2.png", dpi=170)
+    plt.close(fig2)
 
-get_stab = lambda s: float(stab_tbl.loc[stab_tbl["spec"] == s, "coef"].iloc[0])
-get_stab_p = lambda s: float(stab_tbl.loc[stab_tbl["spec"] == s, "p_value"].iloc[0])
+    log(f"Phase 1 audit completed. Recommendation={recommendation}", logs)
 
-gate_tbl = pd.DataFrame(
-    [
-        {"spec": "fe_baseline_twfe", "coef": get_core("fe_baseline_twfe"), "p_value": get_core_p("fe_baseline_twfe")},
-        {
-            "spec": "fe_controls_restricted_twfe",
-            "coef": get_core("fe_controls_restricted_twfe"),
-            "p_value": get_core_p("fe_controls_restricted_twfe"),
-        },
-        {"spec": "iv_twfe_external", "coef": get_core("iv_twfe_external"), "p_value": get_core_p("iv_twfe_external")},
-        {"spec": "period_1991_2005", "coef": get_stab("period_1991_2005"), "p_value": get_stab_p("period_1991_2005")},
-        {"spec": "period_2006_2020", "coef": get_stab("period_2006_2020"), "p_value": get_stab_p("period_2006_2020")},
-    ]
-)
-gate_tbl["abs_drift_pct"] = (gate_tbl["coef"] - baseline_coef).abs() / (
-    abs(baseline_coef) if abs(baseline_coef) > 1e-8 else np.nan
-)
-gate_tbl.to_csv(OUT_AUDIT_T / "spec_gate_table_v2.csv", index=False)
-
-# Corrected scorecard
-preferred_fs_val = float(
-    first_stage_tbl.loc[
-        (first_stage_tbl["instrument"] == preferred_iv) & (first_stage_tbl["outcome"] == "inflation"),
-        "first_stage_stat",
-    ].iloc[0]
-)
-
-score_rows = []
-score_rows.append(
-    {
-        "criterion": "preferred_first_stage_stat_ge_10",
-        "value": preferred_fs_val,
-        "threshold": ">=10",
-        "pass": bool(preferred_fs_val >= 10),
+    return {
+        "core_table": core_table,
+        "first_stage_table": first_stage_table,
+        "placebo_table": placebo_table,
+        "gate_table": gate_table,
+        "scorecard": scorecard,
+        "recommendation": recommendation,
+        "preferred_first_stage_stat": preferred_stat,
+        "preferred_first_stage_p": preferred_p,
+        "preferred_first_stage_relevance_pass": bool(preferred_stat > CHI2_1_95_CRITICAL),
+        "preferred_first_stage_strong_pass": bool(preferred_stat >= STRONG_IV_STAT_THRESHOLD),
     }
-)
-
-positive_count = int((gate_tbl["coef"] > 0).sum())
-score_rows.append(
-    {
-        "criterion": "inflation_positive_sign_at_least_4_of_5",
-        "value": positive_count,
-        "threshold": ">=4",
-        "pass": bool(positive_count >= 4),
-    }
-)
-
-max_drift = float(gate_tbl["abs_drift_pct"].max())
-score_rows.append(
-    {
-        "criterion": "max_inflation_drift_lt_40pct",
-        "value": max_drift,
-        "threshold": "<0.40",
-        "pass": bool(max_drift < 0.40),
-    }
-)
-
-core_gdp = core_tbl[core_tbl["outcome"] == "gdp_growth"].copy()
-weak_count = int((core_gdp["p_value_m2_growth"] >= 0.05).sum())
-all_gdp_specs = int(len(core_gdp))
-score_rows.append(
-    {
-        "criterion": "gdp_effect_weak_all_core_specs",
-        "value": f"{weak_count}/{all_gdp_specs}",
-        "threshold": "all p>=0.05",
-        "pass": bool(weak_count == all_gdp_specs),
-    }
-)
-
-placebo_sig_count = int((placebo_tbl["p_value"] < 0.05).sum())
-score_rows.append(
-    {
-        "criterion": "placebo_tests_not_significant",
-        "value": placebo_sig_count,
-        "threshold": "0 significant",
-        "pass": bool(placebo_sig_count == 0),
-    }
-)
-
-scorecard = pd.DataFrame(score_rows)
-all_pass = bool(scorecard["pass"].all())
-recommendation = "GO_CONTINUE" if all_pass else "GO_PIVOT_SHORT_RUN"
-scorecard["recommendation_if_fail"] = np.where(scorecard["pass"], "", "GO_PIVOT_SHORT_RUN")
-scorecard.to_csv(OUT_AUDIT_T / "audit_scorecard_v2.csv", index=False)
-
-powerbi_core = core_tbl.copy()
-powerbi_core["abs_coef"] = powerbi_core["coef_m2_growth"].abs()
-powerbi_core["is_significant_5pct"] = powerbi_core["p_value_m2_growth"] < 0.05
-powerbi_core["recommendation"] = recommendation
-powerbi_core.to_csv(OUT_AUDIT_T / "powerbi_model_summary_v2.csv", index=False)
-
-# Audit figures
-fig, ax = plt.subplots(figsize=(9, 4))
-sns.barplot(data=gate_tbl, x="spec", y="coef", ax=ax)
-ax.axhline(0, color="black", linewidth=1)
-ax.axhline(baseline_coef, color="red", linestyle="--", label="Baseline FE coef")
-ax.set_title("V2 Inflation Coefficient Across Gate Specs")
-ax.set_ylabel("Coefficient on m2_growth")
-ax.tick_params(axis="x", rotation=25)
-ax.legend()
-fig.tight_layout()
-fig.savefig(OUT_AUDIT_F / "stability_coefficients_gate_v2.png", dpi=170)
-plt.close(fig)
-
-fig2, ax2 = plt.subplots(figsize=(9, 4))
-fs_plot = (
-    first_stage_tbl[["instrument", "first_stage_stat"]]
-    .drop_duplicates()
-    .rename(columns={"first_stage_stat": "value"})
-)
-fs_plot["metric"] = "first_stage_stat"
-pl_plot = placebo_tbl[["test", "stat_t2"]].rename(columns={"test": "instrument", "stat_t2": "value"})
-pl_plot["metric"] = "placebo_t2"
-combo = pd.concat([fs_plot[["instrument", "value", "metric"]], pl_plot[["instrument", "value", "metric"]]], ignore_index=True)
-sns.barplot(data=combo, x="instrument", y="value", hue="metric", ax=ax2)
-ax2.axhline(10, color="red", linestyle="--", label="10 threshold")
-ax2.set_title("V2 First-Stage and Placebo Diagnostics")
-ax2.tick_params(axis="x", rotation=20)
-ax2.legend()
-fig2.tight_layout()
-fig2.savefig(OUT_AUDIT_F / "first_stage_and_placebo_strength_v2.png", dpi=170)
-plt.close(fig2)
-
-# -----------------------------
-# Phase 2 LP-IV V2 (exact FE)
-# -----------------------------
-
-lp_df = df.copy()
-for y in ["inflation", "gdp_growth"]:
-    for h in [0, 1, 2, 3]:
-        lp_df[f"{y}_h{h}"] = lp_df.groupby("Country Name")[y].shift(-h)
 
 
-def run_lp_iv_exact(df_in: pd.DataFrame, outcome: str, horizon: int, instrument: str, controls: list[str]):
-    ycol = f"{outcome}_h{horizon}"
-    cols = ["Country Name", "year", ycol, "m2_growth", instrument] + controls
-    d = df_in[cols].dropna().copy().rename(columns={"Country Name": "country"})
-    formula = f"{ycol} ~ 1"
-    if controls:
-        formula += " + " + " + ".join(controls)
-    formula += f" + C(country) + C(year) [m2_growth ~ {instrument}]"
-    res = IV2SLS.from_formula(formula, data=d).fit(cov_type="clustered", clusters=d["country"])
-    fs = res.first_stage.diagnostics.loc["m2_growth"]
-    coef = float(res.params["m2_growth"])
-    se = float(res.std_errors["m2_growth"])
+def run_lp_iv(panel: pd.DataFrame, outcome: str, horizon: int, instrument: str) -> dict:
+    y_col = f"{outcome}_h{horizon}"
+    cols = ["Country Name", "year", y_col, "m2_growth", instrument, *RESTRICTED_CONTROLS]
+    fit_data = panel[cols].dropna().copy().rename(columns={"Country Name": "country"})
+
+    formula = f"{y_col} ~ 1 + " + " + ".join(RESTRICTED_CONTROLS) + f" + C(country) + C(year) [m2_growth ~ {instrument}]"
+    result = IV2SLS.from_formula(formula, data=fit_data).fit(cov_type="clustered", clusters=fit_data["country"])
+
+    diagnostics = result.first_stage.diagnostics.loc["m2_growth"]
+    coef = float(result.params["m2_growth"])
+    std_error = float(result.std_errors["m2_growth"])
+
     return {
         "outcome": outcome,
         "horizon": horizon,
         "instrument": instrument,
         "coef_m2_growth": coef,
-        "std_error": se,
-        "p_value": float(res.pvalues["m2_growth"]),
-        "ci_low_95": coef - 1.96 * se,
-        "ci_high_95": coef + 1.96 * se,
-        "nobs": int(res.nobs),
-        "first_stage_stat": float(fs["f.stat"]),
-        "first_stage_p": float(fs["f.pval"]),
-        "partial_rsquared": float(fs["partial.rsquared"]),
-        "iv_r2": float(res.rsquared),
+        "std_error": std_error,
+        "p_value": float(result.pvalues["m2_growth"]),
+        "ci_low_95": coef - 1.96 * std_error,
+        "ci_high_95": coef + 1.96 * std_error,
+        "nobs": int(result.nobs),
+        "first_stage_stat": float(diagnostics["f.stat"]),
+        "first_stage_p": float(diagnostics["f.pval"]),
+        "partial_rsquared": float(diagnostics["partial.rsquared"]),
+        "iv_r2": float(result.rsquared),
     }
 
 
-lp_rows: list[dict] = []
-for inst in ["instrument_m2_external_level", "instrument_m2_l1"]:
-    for outcome in ["inflation", "gdp_growth"]:
-        for h in [0, 1, 2, 3]:
-            try:
-                lp_rows.append(run_lp_iv_exact(lp_df, outcome=outcome, horizon=h, instrument=inst, controls=restricted_controls))
-            except Exception as e:
-                log(f"LP-IV exact failed: outcome={outcome}, h={h}, inst={inst}, err={e}")
+def build_phase2_lp(panel: pd.DataFrame, paths: Paths, logs: list[str]) -> dict:
+    lp_panel = panel.copy()
+    horizons = {
+        "inflation": [0, 1, 2, 3],
+        "gdp_growth": [0],
+    }
 
-lp_tbl = pd.DataFrame(lp_rows).sort_values(["instrument", "outcome", "horizon"])
-lp_tbl.to_csv(OUT_LP_T / "lp_iv_all_results_v2.csv", index=False)
+    for outcome, horizon_list in horizons.items():
+        for horizon in horizon_list:
+            out_col = f"{outcome}_h{horizon}"
+            lp_panel[out_col] = exact_horizon_series(
+                source_df=panel,
+                target_df=lp_panel,
+                value_col=outcome,
+                horizon=horizon,
+                out_col=out_col,
+            )
 
-primary = lp_tbl[lp_tbl["instrument"] == "instrument_m2_external_level"].copy()
-alt = lp_tbl[lp_tbl["instrument"] == "instrument_m2_l1"].copy()
-primary.to_csv(OUT_LP_T / "lp_iv_primary_results_v2.csv", index=False)
-alt.to_csv(OUT_LP_T / "lp_iv_alt_results_v2.csv", index=False)
+    rows: list[dict] = []
+    failures: list[str] = []
+    for instrument in ["instrument_m2_external_level", "instrument_m2_l1"]:
+        for outcome, horizon_list in horizons.items():
+            for horizon in horizon_list:
+                try:
+                    rows.append(run_lp_iv(lp_panel, outcome=outcome, horizon=horizon, instrument=instrument))
+                except Exception as exc:  # pragma: no cover - defensive
+                    failures.append(f"outcome={outcome},h={horizon},instrument={instrument},err={exc}")
 
-powerbi_lp = lp_tbl.copy()
-powerbi_lp["is_sig_5pct"] = powerbi_lp["p_value"] < 0.05
-powerbi_lp["abs_coef"] = powerbi_lp["coef_m2_growth"].abs()
-powerbi_lp.to_csv(OUT_LP_T / "powerbi_lp_iv_summary_v2.csv", index=False)
+    expected_rows = sum(len(h) for h in horizons.values()) * 2
+    if failures:
+        raise RuntimeError("LP-IV estimation failures detected:\n" + "\n".join(failures))
+    if len(rows) != expected_rows:
+        raise RuntimeError(f"LP-IV row mismatch: expected {expected_rows}, got {len(rows)}")
 
-# LP plots
-for outcome in ["inflation", "gdp_growth"]:
-    d_out = primary[primary["outcome"] == outcome].sort_values("horizon")
-    fig3, ax3 = plt.subplots(figsize=(7, 4))
-    ax3.plot(d_out["horizon"], d_out["coef_m2_growth"], marker="o", label="LP-IV coefficient")
-    ax3.fill_between(d_out["horizon"], d_out["ci_low_95"], d_out["ci_high_95"], alpha=0.25, label="95% CI")
-    ax3.axhline(0, color="black", linewidth=1)
-    ax3.set_title(f"V2 LP-IV Path: {outcome} (primary IV)")
-    ax3.set_xlabel("Horizon (years)")
-    ax3.set_ylabel("Effect of m2_growth shock")
-    ax3.legend()
-    fig3.tight_layout()
-    fig3.savefig(OUT_LP_F / f"irf_primary_{outcome}_v2.png", dpi=170)
-    plt.close(fig3)
+    lp_table = pd.DataFrame(rows).sort_values(["instrument", "outcome", "horizon"])
+    lp_table.to_csv(paths.out_lp_tables / "lp_iv_all_results_v2.csv", index=False)
 
-fs_plot = lp_tbl.groupby(["instrument", "horizon"], as_index=False)["first_stage_stat"].mean()
-fig4, ax4 = plt.subplots(figsize=(8, 4))
-sns.lineplot(data=fs_plot, x="horizon", y="first_stage_stat", hue="instrument", marker="o", ax=ax4)
-ax4.axhline(10, color="red", linestyle="--", label="10 threshold")
-ax4.set_title("V2 First-Stage Strength by Horizon")
-ax4.set_ylabel("First-stage stat")
-ax4.legend()
-fig4.tight_layout()
-fig4.savefig(OUT_LP_F / "first_stage_by_horizon_v2.png", dpi=170)
-plt.close(fig4)
+    primary = lp_table[lp_table["instrument"] == "instrument_m2_external_level"].copy()
+    alt = lp_table[lp_table["instrument"] == "instrument_m2_l1"].copy()
+    primary.to_csv(paths.out_lp_tables / "lp_iv_primary_results_v2.csv", index=False)
+    alt.to_csv(paths.out_lp_tables / "lp_iv_alt_results_v2.csv", index=False)
 
-# LP interpretation metrics
-sig_count = lambda d: int((d["p_value"] < 0.05).sum())
-primary_inf = primary[primary["outcome"] == "inflation"].sort_values("horizon")
-primary_gdp = primary[primary["outcome"] == "gdp_growth"].sort_values("horizon")
+    powerbi = lp_table.copy()
+    powerbi["is_sig_5pct"] = powerbi["p_value"] < 0.05
+    powerbi["abs_coef"] = powerbi["coef_m2_growth"].abs()
+    powerbi.to_csv(paths.out_lp_tables / "powerbi_lp_iv_summary_v2.csv", index=False)
 
-interp = pd.DataFrame(
-    [
-        {"metric": "inflation_sig_horizons_primary", "value": sig_count(primary_inf)},
-        {"metric": "gdp_sig_horizons_primary", "value": sig_count(primary_gdp)},
-        {"metric": "mean_first_stage_stat_primary", "value": float(primary["first_stage_stat"].mean())},
-        {"metric": "mean_first_stage_stat_alt_lag", "value": float(alt["first_stage_stat"].mean()) if len(alt) else np.nan},
+    for outcome, horizon_list in horizons.items():
+        plot_data = primary[primary["outcome"] == outcome].sort_values("horizon")
+        if plot_data.empty:
+            continue
+
+        fig, ax = plt.subplots(figsize=(7, 4))
+        ax.plot(plot_data["horizon"], plot_data["coef_m2_growth"], marker="o", label="LP-IV coefficient")
+        ax.fill_between(plot_data["horizon"], plot_data["ci_low_95"], plot_data["ci_high_95"], alpha=0.25, label="95% CI")
+        ax.axhline(0, color="black", linewidth=1)
+        if len(horizon_list) == 1:
+            ax.set_title(f"V2 IV Estimate: {outcome} at h=0 (static, primary IV)")
+        else:
+            ax.set_title(f"V2 LP-IV Path: {outcome} (primary IV)")
+        ax.set_xlabel("Horizon (years)")
+        ax.set_ylabel("Effect of m2_growth shock")
+        ax.legend()
+        fig.tight_layout()
+        fig.savefig(paths.out_lp_figures / f"irf_primary_{outcome}_v2.png", dpi=170)
+        plt.close(fig)
+
+    fs_plot = lp_table.groupby(["instrument", "horizon"], as_index=False)["first_stage_stat"].mean()
+    fig2, ax2 = plt.subplots(figsize=(8, 4))
+    sns.lineplot(data=fs_plot, x="horizon", y="first_stage_stat", hue="instrument", marker="o", ax=ax2)
+    ax2.axhline(CHI2_1_95_CRITICAL, color="red", linestyle="--", label="chi2(1) 95% critical")
+    ax2.set_title("V2 First-Stage Strength by Horizon")
+    ax2.set_ylabel("First-stage stat")
+    ax2.legend()
+    fig2.tight_layout()
+    fig2.savefig(paths.out_lp_figures / "first_stage_by_horizon_v2.png", dpi=170)
+    plt.close(fig2)
+
+    primary_inflation = primary[primary["outcome"] == "inflation"].sort_values("horizon")
+    primary_gdp = primary[primary["outcome"] == "gdp_growth"].sort_values("horizon")
+
+    inflation_sig = int((primary_inflation["p_value"] < 0.05).sum())
+    gdp_sig = int((primary_gdp["p_value"] < 0.05).sum())
+
+    metrics = pd.DataFrame(
+        [
+            {"metric": "inflation_sig_horizons_primary", "value": inflation_sig},
+            {"metric": "gdp_sig_horizons_primary", "value": gdp_sig},
+            {"metric": "gdp_horizon_mode_primary", "value": "static_h0_only"},
+            {"metric": "mean_first_stage_stat_primary", "value": float(primary["first_stage_stat"].mean())},
+            {"metric": "mean_first_stage_stat_alt_lag", "value": float(alt["first_stage_stat"].mean()) if len(alt) else np.nan},
+            {"metric": "min_first_stage_stat_primary", "value": float(primary["first_stage_stat"].min()) if len(primary) else np.nan},
+        ]
+    )
+    metrics.to_csv(paths.out_lp_tables / "phase2_interpretation_metrics_v2.csv", index=False)
+
+    # Keep the recommendation conservative for portfolio communication.
+    # Even with chi2 significance, we only mark "effect present" when first-stage stats are comfortably strong.
+    lp_recommendation = (
+        "EVIDENCE_SHORT_RUN_EFFECT_PRESENT"
+        if inflation_sig >= 1 and float(primary["first_stage_stat"].min()) >= 10.0
+        else "EVIDENCE_WEAK_REVISIT_IDENTIFICATION"
+    )
+
+    log(f"Phase 2 LP-IV completed. Recommendation={lp_recommendation}", logs)
+
+    return {
+        "lp_table": lp_table,
+        "primary": primary,
+        "alt": alt,
+        "inflation_sig": inflation_sig,
+        "gdp_sig": gdp_sig,
+        "lp_recommendation": lp_recommendation,
+    }
+
+
+def write_summary(paths: Paths, audit: dict, lp: dict, logs: list[str]) -> None:
+    max_drift = float(audit["gate_table"]["abs_drift_pct"].max())
+    strong_iv_status = "PASS" if audit["preferred_first_stage_strong_pass"] else "FAIL"
+
+    summary_lines = [
+        "# V2 Rebuild Summary",
+        "",
+        "## What changed",
+        "- Kept exact FE formulas for IV estimation.",
+        "- Kept exact calendar-year horizon matching (no row-shift approximation).",
+        "- Added explicit no-partial-export checks for LP-IV outputs.",
+        "- Added inference sensitivity table comparing one-way vs two-way clustering on key IV spec.",
+        "- Clarified weak-IV read: first-stage is reported as clustered Wald chi2(1), not classic F-stat.",
+        "",
+        "## Phase 1 Audit V2",
+        f"- Recommendation: `{audit['recommendation']}`",
+        f"- Preferred first-stage stat (external IV, inflation spec): `{audit['preferred_first_stage_stat']:.4f}`",
+        f"- Preferred first-stage p-value: `{audit['preferred_first_stage_p']:.4f}`",
+        f"- Preferred first-stage strong-IV threshold (>=10): `{strong_iv_status}`",
+        f"- Max inflation drift across gate specs: `{max_drift:.4f}`",
+        f"- Placebo significant tests (p<0.05): `{int((audit['placebo_table']['p_value'] < 0.05).sum())}`",
+        "",
+        "## Phase 2 LP-IV V2",
+        f"- Recommendation flag: `{lp['lp_recommendation']}`",
+        f"- Primary IV inflation significant horizons (5%): `{lp['inflation_sig']}`",
+        f"- Primary IV GDP significant horizons (5%): `{lp['gdp_sig']}` (static h=0 only)",
+        "",
+        "## Claim boundary",
+        "- Treat this as strong cross-country association evidence.",
+        "- Causal interpretation remains limited while first-stage strength is weak/moderate.",
     ]
-)
-interp.to_csv(OUT_LP_T / "phase2_interpretation_metrics_v2.csv", index=False)
 
-primary_min_fs = float(primary["first_stage_stat"].min()) if len(primary) else np.nan
-if sig_count(primary_inf) >= 1 and primary_min_fs >= 10:
-    lp_rec = "EVIDENCE_SHORT_RUN_EFFECT_PRESENT"
-else:
-    lp_rec = "EVIDENCE_WEAK_REVISIT_IDENTIFICATION"
+    (paths.out_root / "V2_SUMMARY.md").write_text("\n".join(summary_lines))
+    (paths.out_root / "v2_run_log.md").write_text("\n".join(["# V2 Run Log", "", *[f"- {msg}" for msg in logs]]))
 
-# Summary write-up
-summary_lines = [
-    "# V2 Rebuild Summary",
-    "",
-    "## What changed",
-    "- Replaced approximate FE handling with exact FE formulas in IV estimation.",
-    "- Replaced plain first-stage t^2 proxies with clustered first-stage diagnostics from linearmodels.",
-    "- Enforced restricted controls in audited GDP specs (no gdp_pc_growth leakage).",
-    "- Expanded stability audit to leave-one-region-out across all available regions.",
-    "",
-    "## Phase 1 Audit V2",
-    f"- Recommendation: `{recommendation}`",
-    f"- Preferred first-stage stat (external IV, inflation spec): `{preferred_fs_val:.4f}`",
-    f"- Max inflation drift across gate specs: `{max_drift:.4f}`",
-    f"- Placebo significant tests (p<0.05): `{placebo_sig_count}`",
-    "",
-    "## Phase 2 LP-IV V2",
-    f"- Recommendation flag: `{lp_rec}`",
-    f"- Primary IV mean first-stage stat: `{float(primary['first_stage_stat'].mean()):.4f}`",
-    f"- Primary IV inflation significant horizons (5%): `{sig_count(primary_inf)}`",
-    f"- Primary IV GDP significant horizons (5%): `{sig_count(primary_gdp)}`",
-    "",
-    "## Claim boundary",
-    "- If first-stage remains below strong threshold, treat this as robust association evidence, not defended causal effect.",
-]
 
-summary_path = OUT_ROOT / "V2_SUMMARY.md"
-summary_path.write_text("\n".join(summary_lines))
+def main() -> None:
+    paths = build_paths()
+    logs: list[str] = []
 
-# logs
-(OUT_ROOT / "v2_run_log.md").write_text("\n".join(["# V2 Run Log", ""] + [f"- {x}" for x in LOG_LINES]))
+    ensure_output_dirs(paths)
+    ensure_inputs(paths)
 
-print("V2 rebuild completed.")
-print("Audit outputs:", OUT_AUDIT)
-print("LP outputs:", OUT_LP)
-print("Summary:", summary_path)
+    panel = read_panel(paths, logs)
+    audit = build_phase1_audit(panel, paths, logs)
+    lp = build_phase2_lp(panel, paths, logs)
+    write_summary(paths, audit, lp, logs)
+
+    print("V2 rebuild completed.")
+    print("Audit outputs:", paths.out_audit)
+    print("LP outputs:", paths.out_lp)
+    print("Summary:", paths.out_root / "V2_SUMMARY.md")
+
+
+if __name__ == "__main__":
+    main()

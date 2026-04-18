@@ -19,6 +19,7 @@ The review found three blocking issues:
 - Re-run stability checks (tail, period split, leave-one-region-out all regions).
 - Re-run scorecard gate.
 - Rebuild Phase 2 LP-IV using exact FE formula (`C(country)+C(year)`) with clustered SE.
+- Keep GDP short-run equation static at horizon `h=0` (no dynamic GDP horizon path).
 
 ## Data policy in V2
 - Required inputs:
