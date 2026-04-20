@@ -1,37 +1,36 @@
-# Technical Appendix and Traceability (2026-04-19)
+# Technical Appendix (Simple, Traceable Version, 2026-04-19)
 
-## 1) Scope and Objective
+## What this file is for
 
-This appendix documents the exact source tables and row filters used to construct all headline statements in the executive memo.
+This is the "show me exactly where the number came from" file.
+Every claim in the memo maps to a table row below.
 
-Canonical workflow used for this package:
+## Repro path used
 
 1. Run `notebooks/phase_0_objA_lucas_replication.ipynb`
 2. Run `notebooks/phase_1_objB_baseline.ipynb`
 3. Run `notebooks/phase_2_objB_short_run.ipynb`
-4. Cross-check against `v2/` parity report
+4. Cross-check with `docs/NOTEBOOK_V2_PARITY_2026-04-19.md`
 
-Units convention used throughout:
+Units:
 
-- Growth and inflation variables are decimal rates (for example, `0.01 = 1` percentage point).
+- Growth and inflation are decimal rates (`0.01 = 1` percentage point).
 
-## 2) Identification Framework
+## How we interpret identification (plain language)
 
-Two-tier first-stage interpretation:
+Gate rules:
 
-- Relevance gate: first-stage Wald `chi2(1) > 3.8415` and `p < 0.05`
-- Strong-IV label: first-stage statistic `>= 10.0`
+- Relevance: first-stage Wald `chi2(1) > 3.8415` (same as `p < 0.05` for `chi2(1)`)
+- Strong-IV: first-stage stat `>= 10.0`
 
-For a `chi2(1)` test, the two relevance expressions above are equivalent ways to report the same first-stage test.
+How to read results:
 
-Interpretation rule used in memo:
+- If relevance passes but strong-IV fails, treat results as association with caution.
+- Passing first-stage checks alone does not prove causality; exclusion and exogeneity still matter and are not test-verified here.
 
-- If relevance passes but strong-IV fails, treat effects as associational evidence with caution on causal strength.
-- Passing first-stage gates is not sufficient for causal interpretation by itself; exclusion and exogeneity assumptions are additional requirements and are not directly test-verified in this package.
+## Claim-to-table map
 
-## 3) Traceability Matrix
-
-Long-run country-average rows use the notebook's `n >= 30` annual-observation filter, yielding `n = 86` countries in the exported long-run table.
+Long-run country-average rows use the notebook filter `n >= 30`, and the exported long-run sample is `n = 86` countries.
 
 | Memo claim ID | Statement (short form) | Value | Source file | Row filter / extraction rule |
 | --- | --- | ---: | --- | --- |
@@ -77,7 +76,7 @@ Long-run country-average rows use the notebook's `n >= 30` annual-observation fi
 | C40 | Inflation relevance gate all horizons (primary external instrument) | True | outputs/notebook_phase2/phase2_interpretation_metrics.csv | `metric == inflation_relevance_gate_all_horizons` -> `value` |
 | C41 | Inflation strong-IV all horizons (primary external instrument) | False | outputs/notebook_phase2/phase2_interpretation_metrics.csv | `metric == inflation_strong_iv_all_horizons` -> `value` |
 
-## 4) Cross-Pipeline Consistency
+## Cross-pipeline consistency
 
 Notebook outputs were compared against canonical v2 outputs for FE/IV/LP-primary headline metrics.
 
@@ -85,7 +84,7 @@ Notebook outputs were compared against canonical v2 outputs for FE/IV/LP-primary
 - Tolerance check (`<= 1e-9`): pass
 - Reference: `docs/NOTEBOOK_V2_PARITY_2026-04-19.md`
 
-## 5) Caveats for Interpretation
+## Caveats you should keep in mind
 
 1. The relevance gate is satisfied for primary external-instrument specifications.
 2. Strong-IV threshold is not satisfied in key primary rows.

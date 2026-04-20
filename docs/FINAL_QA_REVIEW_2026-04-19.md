@@ -1,51 +1,49 @@
-# Final QA Review (2026-04-19)
+# Final QA Review (Simple Log, 2026-04-19)
 
-## Review intent
+## Why we did this
 
-This QA pass was executed to avoid rushed delivery and to pressure-test quantitative consistency, identification interpretation, and interview-facing narrative risk.
+The goal was to make sure the final package is not rushed, not over-claimed, and easy to trust in an interview setting.
 
-## Skills and review modes used
+## What we used
 
-- `econometric-code-guardrails`: estimand/identification-first checks and diagnostic consistency.
-- `econometrics-modeling`: separation of identification vs estimation and inference caveats.
-- `academic-paper-writer`: economics writing conventions and over-claim prevention.
-- `econ-answering`: concise caveat framing and assumption clarity.
-- Independent adversarial agents:
-  - `model-review-math-econ`
-  - `evaluator`
+- `econometric-code-guardrails`
+- `econometrics-modeling`
+- `academic-paper-writer`
+- `econ-answering`
+- Independent check agents: `model-review-math-econ`, `evaluator`
 
-## Checks executed
+## What we checked
 
-1. Deterministic traceability audit:
-   - Parsed 41 claim rows from technical appendix and compared each value to canonical source tables.
-   - Outcome: all 41/41 matched (rounding-consistent).
+1. Number traceability:
+   - 41 appendix claim rows were matched back to canonical source tables.
+   - Result: 41/41 matched (rounding-consistent).
 
-2. Identification-language audit:
-   - Verified memo uses associational framing and does not claim strong-IV pass.
-   - Added explicit weak-identification and multiple-testing caveats.
+2. Identification wording:
+   - Confirmed the memo stays in associational language.
+   - Added weak-IV and multiple-testing caveats.
 
-3. Scope-integrity audit for phase 2 metrics:
+3. Phase 2 scope clarity:
    - Clarified that "all horizons" gate rows refer to the primary external instrument.
-   - Added alternate-instrument relevance failures at h2-h3 to caveats.
+   - Added explicit note that the alternate instrument fails relevance at `h2` and `h3`.
 
-4. Unit-clarity audit:
-   - Added explicit units statement: decimal rates (`0.01 = 1` percentage point).
+4. Units:
+   - Added plain units note (`0.01 = 1` percentage point).
 
-## Fixes applied after QA
+## What changed after QA
 
-- Updated `deliverables/final_package/EXECUTIVE_MEMO_2026-04-19.md`:
-  - Added units line.
-  - Clarified gate equivalence wording for `chi2(1)` and `p<0.05`.
-  - Added multiple-testing and weak-IV caveats in Phase 2 section.
+- `deliverables/final_package/EXECUTIVE_MEMO_2026-04-19.md`
+  - simpler wording
+  - unit line
+  - gate-equivalence note
+  - weak-IV and multiple-testing caveats
 
-- Updated `deliverables/final_package/TECHNICAL_APPENDIX_2026-04-19.md`:
-  - Added units convention.
-  - Added note that first-stage gates are not sufficient for causal interpretation (exclusion/exogeneity still required).
-  - Added long-run filter traceability note (`n >= 30`, resulting `n = 86`).
-  - Clarified C40/C41 as primary-instrument-only metrics.
-  - Added caveat on alternate-instrument relevance failures at h2/h3.
+- `deliverables/final_package/TECHNICAL_APPENDIX_2026-04-19.md`
+  - simpler top sections
+  - clearer identification assumptions and limits
+  - long-run filter traceability note
+  - primary-vs-alternate instrument scope caveat
 
-## Residual risk (explicit)
+## Remaining limits (honest version)
 
-- Weak-identification sensitivity remains an econometric limitation for exact IV significance claims.
-- LP horizon significance remains exploratory unless supplemented with multiplicity-adjusted or joint inference.
+- Weak identification is still a real limitation for precise IV significance interpretation.
+- LP horizon significance is still exploratory unless paired with multiplicity-adjusted or joint tests.
