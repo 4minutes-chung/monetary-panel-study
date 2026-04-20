@@ -11,6 +11,10 @@ Canonical workflow used for this package:
 3. Run `notebooks/phase_2_objB_short_run.ipynb`
 4. Cross-check against `v2/` parity report
 
+Units convention used throughout:
+
+- Growth and inflation variables are decimal rates (for example, `0.01 = 1` percentage point).
+
 ## 2) Identification Framework
 
 Two-tier first-stage interpretation:
@@ -18,11 +22,16 @@ Two-tier first-stage interpretation:
 - Relevance gate: first-stage Wald `chi2(1) > 3.8415` and `p < 0.05`
 - Strong-IV label: first-stage statistic `>= 10.0`
 
+For a `chi2(1)` test, the two relevance expressions above are equivalent ways to report the same first-stage test.
+
 Interpretation rule used in memo:
 
 - If relevance passes but strong-IV fails, treat effects as associational evidence with caution on causal strength.
+- Passing first-stage gates is not sufficient for causal interpretation by itself; exclusion and exogeneity assumptions are additional requirements and are not directly test-verified in this package.
 
 ## 3) Traceability Matrix
+
+Long-run country-average rows use the notebook's `n >= 30` annual-observation filter, yielding `n = 86` countries in the exported long-run table.
 
 | Memo claim ID | Statement (short form) | Value | Source file | Row filter / extraction rule |
 | --- | --- | ---: | --- | --- |
@@ -65,8 +74,8 @@ Interpretation rule used in memo:
 | C37 | Inflation significant horizons count | 4 | outputs/notebook_phase2/phase2_interpretation_metrics.csv | `metric == inflation_sig_horizons_5pct` -> `value` |
 | C38 | GDP significant horizons count | 0 | outputs/notebook_phase2/phase2_interpretation_metrics.csv | `metric == gdp_sig_horizons_5pct` -> `value` |
 | C39 | Min inflation first-stage stat | 4.2243 | outputs/notebook_phase2/phase2_interpretation_metrics.csv | `metric == inflation_min_first_stage_stat_primary` -> `value` |
-| C40 | Inflation relevance gate all horizons | True | outputs/notebook_phase2/phase2_interpretation_metrics.csv | `metric == inflation_relevance_gate_all_horizons` -> `value` |
-| C41 | Inflation strong-IV all horizons | False | outputs/notebook_phase2/phase2_interpretation_metrics.csv | `metric == inflation_strong_iv_all_horizons` -> `value` |
+| C40 | Inflation relevance gate all horizons (primary external instrument) | True | outputs/notebook_phase2/phase2_interpretation_metrics.csv | `metric == inflation_relevance_gate_all_horizons` -> `value` |
+| C41 | Inflation strong-IV all horizons (primary external instrument) | False | outputs/notebook_phase2/phase2_interpretation_metrics.csv | `metric == inflation_strong_iv_all_horizons` -> `value` |
 
 ## 4) Cross-Pipeline Consistency
 
@@ -81,3 +90,5 @@ Notebook outputs were compared against canonical v2 outputs for FE/IV/LP-primary
 1. The relevance gate is satisfied for primary external-instrument specifications.
 2. Strong-IV threshold is not satisfied in key primary rows.
 3. Accordingly, policy language should avoid definitive causal claims and keep emphasis on robust association patterns.
+4. Horizon-by-horizon LP-IV p-values are unadjusted for multiple testing, so later-horizon significance should be interpreted cautiously.
+5. Alternate instrument (`instrument_m2_l1`) fails relevance at inflation horizons `h=2` and `h=3` (`stat=3.3017`, `p=0.0692`; `stat=2.9941`, `p=0.0836`) in `outputs/notebook_phase2/phase2_lp_iv_alt_results.csv`.
