@@ -112,8 +112,8 @@ Step 0 snapshot file:
 ### Step 4: Rebuild and verify
 
 - [x] Run script parity commands end-to-end.
-- [ ] Run notebook phase chain end-to-end.
-- [ ] Validate notebook exports against v2 headline metrics.
+- [x] Run notebook phase chain end-to-end.
+- [x] Validate notebook exports against v2 headline metrics.
 
 ### Step 5: Documentation hardening
 
@@ -128,6 +128,6 @@ Step 0 snapshot file:
 
 ## 6. Immediate next actions
 
-1. Run the three new notebooks end-to-end and lock their outputs.
-2. Validate notebook exports against v2 headline metrics.
-3. Finalize Step 6 package from canonical outputs.
+1. Produce one executive memo from canonical notebook/v2 outputs.
+2. Produce one technical appendix with table traceability.
+3. Ensure every memo figure/number cites a source table path.
