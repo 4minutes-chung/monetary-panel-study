@@ -123,11 +123,11 @@ Step 0 snapshot file:
 
 ### Step 6: Final research package
 
-- [ ] Produce one executive memo and one technical appendix from canonical outputs.
-- [ ] Ensure all numbers in memo are traceable to output tables.
+- [x] Produce one executive memo and one technical appendix from canonical outputs.
+- [x] Ensure all numbers in memo are traceable to output tables.
 
 ## 6. Immediate next actions
 
-1. Produce one executive memo from canonical notebook/v2 outputs.
-2. Produce one technical appendix with table traceability.
-3. Ensure every memo figure/number cites a source table path.
+1. Export the memo and appendix to preferred presentation format if needed.
+2. Build or refresh interview deck slides from canonical memo claims.
+3. Run one final QA pass on wording consistency across README, START_HERE, and memo.
