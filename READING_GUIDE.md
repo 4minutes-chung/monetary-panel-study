@@ -122,6 +122,7 @@ Important tracking convention:
 ## 8. Cleanup actions completed in this simplification wave
 
 - Removed redundant pointer doc: `START_HERE.md`.
+- Removed stale duplicate plan doc: `v2/V2_PLAN.md` (its purpose is now covered by `RESEARCH_TARGET.md` + this guide).
 - Removed tracked generated artifacts:
   - `archive/legacy_reports/phase1_brainstorm.log`
   - `outputs/phase1_audit/phase1_audit_short_report.aux`
