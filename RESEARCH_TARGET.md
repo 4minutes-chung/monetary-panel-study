@@ -14,7 +14,7 @@ If any other document conflicts with this file, this file wins.
 Rule for other docs:
 
 - `README.md` is a reading guide.
-- `START_HERE.md` is a lightweight pointer only.
+- `READING_GUIDE.md` is the detailed process memory (learning, assumptions, file map, and git hygiene).
 - memos/decks must inherit numbers and caveats from this contract.
 
 ## 1. Canonical Research Target
@@ -70,8 +70,8 @@ From project root:
 3. Run `notebooks/phase_1_objB_baseline.ipynb` (Run All)
 4. Run `notebooks/phase_2_objB_short_run.ipynb` (Run All)
 5. Optional parity rebuild:
-	- `python3 v2/run_v2_rebuild.py`
-	- `python3 v2/build_portfolio_graphs.py`
+   - `python3 v2/run_v2_rebuild.py`
+   - `python3 v2/build_portfolio_graphs.py`
 
 ## 5. Canonical Outputs
 
@@ -101,4 +101,4 @@ A cycle is done only when all conditions hold:
 
 1. Maintain a single report draft that references canonical tables and figures.
 2. Keep README in coffee-chat guidance mode, not method-heavy mode.
-3. Keep START_HERE minimal to avoid duplicate instructions.
+3. Avoid duplicate entrypoint docs that can drift from this contract.

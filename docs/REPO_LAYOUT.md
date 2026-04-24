@@ -5,7 +5,7 @@
 - Root active inputs: `macro_growth_merged.csv`, `m2_raw.csv`, `cpi_raw.csv`, `gdp_raw.csv`.
 - Notebook-first analysis: `notebooks/`.
 - Script parity and portfolio graphs: `v2/`.
-- Current guidance docs: `START_HERE.md`, `README.md`, `RESEARCH_TARGET.md`.
+- Current guidance docs: `README.md`, `RESEARCH_TARGET.md`, `READING_GUIDE.md`.
 
 ## Archived historical materials
 

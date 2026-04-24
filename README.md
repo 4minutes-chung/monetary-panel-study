@@ -15,14 +15,16 @@ Before reading anything else, use `RESEARCH_TARGET.md` as the source of truth.
 - It defines the canonical run path.
 - It defines the gate rules.
 - It defines what we are and are not claiming.
+- For full process memory (learning, assumptions, file map, and `.gitignore` policy), read `READING_GUIDE.md`.
 
 ## Reading Flow (Graph first, then table)
 
-1. Graphs: open `v2/outputs/portfolio_graphs/`.
-2. Audit tables: open `v2/outputs/phase1_audit_v2/tables/`.
-3. Short-run tables: open `v2/outputs/phase2_short_run_v2/tables/`.
-4. Summary checkpoint: open `v2/outputs/V2_SUMMARY.md`.
-5. Narrative draft in progress: open `deliverables/final_package/REPORT_DRAFT_IN_PROGRESS.md`.
+1. Context + assumptions: open `READING_GUIDE.md`.
+2. Graphs: open `v2/outputs/portfolio_graphs/`.
+3. Audit tables: open `v2/outputs/phase1_audit_v2/tables/`.
+4. Short-run tables: open `v2/outputs/phase2_short_run_v2/tables/`.
+5. Summary checkpoint: open `v2/outputs/V2_SUMMARY.md`.
+6. Narrative draft in progress: open `deliverables/final_package/REPORT_DRAFT_IN_PROGRESS.md`.
 
 ## Fast Run Commands
 

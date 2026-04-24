@@ -82,7 +82,7 @@ No destructive command has been executed in this step.
 
 ## Progress update (2026-04-18)
 
-- Canonical entrypoint documented in `START_HERE.md` and `README.md`.
+- Canonical entrypoint documented in `README.md`, `RESEARCH_TARGET.md`, and `READING_GUIDE.md`.
 - Gate framework unified as two-tier (`chi2(1)>3.8415` relevance, `>=10` strong-IV label) across:
 
   - `v2/run_v2_rebuild.py`
