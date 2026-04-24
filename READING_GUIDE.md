@@ -82,9 +82,13 @@ From project root:
 - `v2/`: script parity pipeline and graph builder.
 - `v2/outputs/`: canonical script outputs (summary, tables, figures).
 - `deliverables/final_package/`: memo, appendix, and report draft.
-- `docs/`: active docs + legacy notes.
-- `archive/`: historical notebooks/data/reports/references.
+- `docs/`: active technical notes used by current workflow.
 - `outputs/phase*`: historical references (non-canonical for current claims).
+
+Lean-mode note:
+
+- Historical notebooks/reports/references are not kept in the working tree anymore.
+- If needed, recover them from git history rather than maintaining archive copies in the active repo.
 
 ## 6.3 High-priority outputs to cite
 
@@ -123,8 +127,9 @@ Important tracking convention:
 
 - Removed redundant pointer doc: `START_HERE.md`.
 - Removed stale duplicate plan doc: `v2/V2_PLAN.md` (its purpose is now covered by `RESEARCH_TARGET.md` + this guide).
+- Removed the tracked `archive/` tree to keep active repo surface minimal (history retained in git).
+- Removed redundant legacy docs not needed for canonical run interpretation.
 - Removed tracked generated artifacts:
-  - `archive/legacy_reports/phase1_brainstorm.log`
   - `outputs/phase1_audit/phase1_audit_short_report.aux`
   - `outputs/phase1_audit/phase1_audit_short_report.log`
 - Updated active docs to reference the new guide as the long-form onboarding memory.

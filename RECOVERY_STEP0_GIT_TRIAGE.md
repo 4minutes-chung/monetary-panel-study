@@ -4,6 +4,8 @@ Date: 2026-04-18
 Branch: main
 HEAD: 2266503
 
+Note: this file is a historical recovery snapshot. The current lean repository may no longer include the temporary `archive/` folders referenced below.
+
 ## Current state summary
 
 The repository is in a mixed migration state with:
