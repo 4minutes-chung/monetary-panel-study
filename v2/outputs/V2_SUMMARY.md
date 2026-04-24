@@ -9,9 +9,12 @@
 
 ## Phase 1 Audit V2
 - Recommendation: `GO_PIVOT_SHORT_RUN`
-- Preferred first-stage stat (external IV, inflation spec): `4.2243`
-- Preferred first-stage p-value: `0.0398`
-- Preferred first-stage strong-IV threshold (>=10): `FAIL`
+- Preferred first-stage stat (country clustering): `4.2243`
+- Preferred first-stage stat (country+year clustering): `3.8016`
+- Canonical conservative first-stage stat: `3.8016`
+- Canonical conservative first-stage p-value: `0.0512`
+- Relevance agreement across clustering choices: `False`
+- Preferred first-stage strong-IV threshold (>=10, conservative): `FAIL`
 - Max inflation drift across gate specs: `0.8750`
 - Placebo significant tests (p<0.05): `1`
 

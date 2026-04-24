@@ -1,7 +1,8 @@
 criterion,value,threshold,pass,recommendation_if_fail
-preferred_first_stage_stat_gt_chi2_95,4.224306224320861,>3.8415,True,
-preferred_first_stage_stat_ge_10_for_strong_iv,4.224306224320861,>=10.0,False,GO_PIVOT_SHORT_RUN
-preferred_first_stage_p_lt_0p05,0.0398489070229171,<0.05,True,
+preferred_first_stage_stat_gt_chi2_95_conservative,3.801589646450824,>3.8415,False,GO_PIVOT_SHORT_RUN
+preferred_first_stage_stat_ge_10_for_strong_iv_conservative,3.801589646450824,>=10.0,False,GO_PIVOT_SHORT_RUN
+preferred_first_stage_p_lt_0p05_conservative,0.05120394870980782,<0.05,False,GO_PIVOT_SHORT_RUN
+preferred_relevance_agrees_across_clustering,0,1,False,GO_PIVOT_SHORT_RUN
 inflation_positive_sign_at_least_4_of_5,5,>=4,True,
 max_inflation_drift_lt_40pct,0.8750380400303694,<0.40,False,GO_PIVOT_SHORT_RUN
 gdp_effect_weak_all_core_specs,4/4,all p>=0.05,True,

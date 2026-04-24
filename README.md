@@ -1,53 +1,50 @@
 # Money Growth, Inflation, and GDP Growth
 
-## Start Here
+## Coffee Chat Version (60 seconds)
 
-- `START_HERE.md`
+If we were chatting quickly:
 
-Question:
+- Inflation and money growth move together strongly in this panel.
+- GDP growth links are weaker and not robust.
+- Causal language is limited by first-stage strength, so interpretation stays careful.
 
-> Across countries, how strongly is money growth linked to inflation and GDP growth?
+## Contract First
 
-## Run
+Before reading anything else, use `RESEARCH_TARGET.md` as the source of truth.
+
+- It defines the canonical run path.
+- It defines the gate rules.
+- It defines what we are and are not claiming.
+
+## Reading Flow (Graph first, then table)
+
+1. Graphs: open `v2/outputs/portfolio_graphs/`.
+2. Audit tables: open `v2/outputs/phase1_audit_v2/tables/`.
+3. Short-run tables: open `v2/outputs/phase2_short_run_v2/tables/`.
+4. Summary checkpoint: open `v2/outputs/V2_SUMMARY.md`.
+5. Narrative draft in progress: open `deliverables/final_package/REPORT_DRAFT_IN_PROGRESS.md`.
+
+## Fast Run Commands
 
 ```bash
 python3 -m pip install -r requirements.txt
-# Notebook-first flow
+
+# Notebook-first canonical flow
 # 1) notebooks/phase_0_objA_lucas_replication.ipynb (Run All)
 # 2) notebooks/phase_1_objB_baseline.ipynb (Run All)
 # 3) notebooks/phase_2_objB_short_run.ipynb (Run All)
 
-# Optional script parity check
+# Optional script parity refresh
 python3 v2/run_v2_rebuild.py
 python3 v2/build_portfolio_graphs.py
 ```
 
-## What to show
+## Legacy Note
 
-- `v2/outputs/V2_SUMMARY.md`
-- `v2/outputs/portfolio_graphs/`
+- `outputs/phase1*` and `outputs/phase2_short_run*` are historical references.
+- Current decision docs and claims should come from notebook exports plus `v2/outputs/` outputs under the contract.
 
-## Headline
-
-- Inflation: strong positive association with money growth.
-- GDP growth: weak and non-robust association.
-- Evidence is associational, not final causal identification.
-
-## Workflow Note
-
-- Current cycle is notebook-first (`notebooks/phase_0*`, `phase_1*`, `phase_2*`) with script parity checks in `v2/`.
-- Legacy `outputs/phase*` artifacts are historical references only.
-
-## Repository Layout
-
-- Root keeps active run inputs (`macro_growth_merged.csv`, `m2_raw.csv`, `cpi_raw.csv`, `gdp_raw.csv`) and canonical docs.
-- `notebooks/` contains the 3-phase notebook story for Obj A and Obj B.
-- `v2/` contains script parity checks and portfolio graph generation.
-- `docs/legacy_notes/` stores older narrative notes kept for reference.
-- `archive/legacy_data/`, `archive/legacy_reports/`, `archive/references/`, and `archive/notebooks_legacy/` store historical materials moved out of root.
-- See `docs/REPO_LAYOUT.md` for the full post-cleanup map.
-
-## Graphs
+## Visual Index
 
 ![Core coefficients](v2/outputs/portfolio_graphs/01_core_coefficients.png)
 ![First-stage strength](v2/outputs/portfolio_graphs/02_first_stage_strength.png)

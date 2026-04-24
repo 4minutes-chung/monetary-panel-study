@@ -7,18 +7,49 @@ const {
 } = require("./pptxgenjs_helpers/layout");
 
 function parseCsv(filePath) {
-  const raw = fs.readFileSync(filePath, "utf8").trim();
-  const lines = raw.split(/\r?\n/).filter(Boolean);
-  const header = lines[0].split(",").map((cell) => cell.trim());
+  const raw = fs.readFileSync(filePath, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+  const lines = raw.split("\n").filter((line) => line.trim().length > 0);
+  const header = parseCsvLine(lines[0]);
 
   return lines.slice(1).map((line) => {
-    const values = line.split(",");
+    const values = parseCsvLine(line);
     const row = {};
     for (let i = 0; i < header.length; i += 1) {
       row[header[i]] = (values[i] ?? "").trim();
     }
     return row;
   });
+}
+
+function parseCsvLine(line) {
+  const values = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+    if (char === "," && !inQuotes) {
+      values.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+
+  if (inQuotes) {
+    throw new Error(`Malformed CSV row with unclosed quote: ${line}`);
+  }
+  values.push(current.trim());
+  return values;
 }
 
 function toNumber(value) {

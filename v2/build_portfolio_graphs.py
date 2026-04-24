@@ -130,12 +130,13 @@ def chart_lp_gdp(primary: pd.DataFrame, alt: pd.DataFrame) -> None:
 
 
 def chart_lp_first_stage(all_lp: pd.DataFrame) -> None:
-    d = all_lp.groupby(["instrument", "horizon"], as_index=False)["first_stage_stat"].mean()
+    d = all_lp.groupby(["instrument", "outcome", "horizon"], as_index=False)["first_stage_stat"].mean()
+    d["series"] = d["instrument"] + " | " + d["outcome"]
 
     fig, ax = plt.subplots(figsize=(10, 6))
-    sns.lineplot(data=d, x="horizon", y="first_stage_stat", hue="instrument", marker="o", linewidth=2.5, ax=ax)
+    sns.lineplot(data=d, x="horizon", y="first_stage_stat", hue="series", marker="o", linewidth=2.5, ax=ax)
     ax.axhline(3.841458820694124, color="#e63946", linestyle="--", linewidth=2, label="chi2(1) 95% critical")
-    ax.set_title("First-Stage Strength by Horizon")
+    ax.set_title("First-Stage Strength by Horizon (Instrument x Outcome)")
     ax.set_xlabel("Horizon")
     ax.set_ylabel("First-stage stat")
     ax.legend()

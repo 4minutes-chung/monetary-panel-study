@@ -24,6 +24,7 @@ RESTRICTED_CONTROLS = ["trade_open", "pop_growth", "investment_share"]
 PREFERRED_IV = "instrument_m2_external_level"
 CHI2_1_95_CRITICAL = 3.841458820694124
 STRONG_IV_STAT_THRESHOLD = 10.0
+PLACEBO_PERMUTATIONS = 64
 
 
 @dataclass(frozen=True)
@@ -189,6 +190,26 @@ def int_cluster_columns(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def sample_derangement(values: np.ndarray, rng: np.random.Generator, max_attempts: int = 2000) -> np.ndarray:
+    if len(values) < 2:
+        raise ValueError("Need at least two values to build a derangement.")
+    for _ in range(max_attempts):
+        shuffled = values.copy()
+        rng.shuffle(shuffled)
+        if not np.any(shuffled == values):
+            return shuffled
+    raise RuntimeError("Failed to generate a derangement without fixed points.")
+
+
+def empirical_two_sided_pvalue(observed: float, null_draws: list[float]) -> float:
+    if not null_draws:
+        return 1.0
+    abs_observed = abs(float(observed))
+    abs_null = np.abs(np.array(null_draws, dtype=float))
+    # +1 correction keeps p-value valid in finite randomization samples.
+    return float((1 + int(np.sum(abs_null >= abs_observed))) / (len(abs_null) + 1))
+
+
 def run_placebo_tests(panel: pd.DataFrame) -> pd.DataFrame:
     lead_base = panel[["Country Name", "year", "m2_growth", *RESTRICTED_CONTROLS]].copy()
     lead_base["instrument_lead"] = exact_horizon_series(
@@ -206,25 +227,49 @@ def run_placebo_tests(panel: pd.DataFrame) -> pd.DataFrame:
         data=lead_data,
     ).fit(cov_type="cluster", cov_kwds={"groups": lead_data["country"]})
 
-    perm_data = panel[["Country Name", "year", "m2_growth", PREFERRED_IV, *RESTRICTED_CONTROLS]].dropna().copy()
-    perm_data = perm_data.rename(columns={"Country Name": "country"})
+    perm_base = panel[["Country Name", "year", "m2_growth", PREFERRED_IV, *RESTRICTED_CONTROLS]].dropna().copy()
+    perm_base = perm_base.rename(columns={"Country Name": "country"})
 
     rng = np.random.default_rng(42)
-    countries = np.array(sorted(perm_data["country"].unique()))
-    shuffled = countries.copy()
-    rng.shuffle(shuffled)
-    perm_map = dict(zip(countries, shuffled))
+    countries = np.array(sorted(perm_base["country"].unique()))
+    permutation_coefs: list[float] = []
+    permutation_nobs: list[int] = []
 
-    perm_data["country_perm"] = perm_data["country"].map(perm_map)
-    lookup = perm_data[["country", "year", PREFERRED_IV]].rename(
-        columns={"country": "country_perm", PREFERRED_IV: "instrument_perm"}
-    )
-    perm_data = perm_data.merge(lookup, on=["country_perm", "year"], how="left").dropna(subset=["instrument_perm"])
+    for _ in range(PLACEBO_PERMUTATIONS):
+        shuffled = sample_derangement(countries, rng)
+        perm_map = dict(zip(countries, shuffled))
+        perm_data = perm_base.copy()
+        perm_data["country_perm"] = perm_data["country"].map(perm_map)
 
-    perm_fit = smf.ols(
-        "m2_growth ~ instrument_perm + " + " + ".join(RESTRICTED_CONTROLS) + " + C(country) + C(year)",
-        data=perm_data,
-    ).fit(cov_type="cluster", cov_kwds={"groups": perm_data["country"]})
+        if bool((perm_data["country"] == perm_data["country_perm"]).any()):
+            raise RuntimeError("Permutation placebo map contains fixed points; null contamination risk.")
+
+        lookup = perm_data[["country", "year", PREFERRED_IV]].rename(
+            columns={"country": "country_perm", PREFERRED_IV: "instrument_perm"}
+        )
+        perm_data = perm_data.merge(lookup, on=["country_perm", "year"], how="left").dropna(subset=["instrument_perm"])
+
+        perm_fit = smf.ols(
+            "m2_growth ~ instrument_perm + " + " + ".join(RESTRICTED_CONTROLS) + " + C(country) + C(year)",
+            data=perm_data,
+        ).fit(cov_type="cluster", cov_kwds={"groups": perm_data["country"]})
+        permutation_coefs.append(float(perm_fit.params["instrument_perm"]))
+        permutation_nobs.append(int(perm_fit.nobs))
+
+    observed_fit = smf.ols(
+        "m2_growth ~ " + PREFERRED_IV + " + " + " + ".join(RESTRICTED_CONTROLS) + " + C(country) + C(year)",
+        data=perm_base,
+    ).fit(cov_type="cluster", cov_kwds={"groups": perm_base["country"]})
+    observed_coef = float(observed_fit.params[PREFERRED_IV])
+
+    null_mean = float(np.mean(permutation_coefs))
+    null_std = float(np.std(permutation_coefs, ddof=1)) if len(permutation_coefs) > 1 else 0.0
+    if null_std <= 1e-12:
+        stat = 0.0 if abs(observed_coef) <= 1e-12 else np.inf
+    else:
+        stat = observed_coef / null_std
+
+    permutation_pvalue = empirical_two_sided_pvalue(observed_coef, permutation_coefs)
 
     return pd.DataFrame(
         [
@@ -238,11 +283,14 @@ def run_placebo_tests(panel: pd.DataFrame) -> pd.DataFrame:
             },
             {
                 "test": "permutation_placebo",
-                "coef": float(perm_fit.params["instrument_perm"]),
-                "p_value": float(perm_fit.pvalues["instrument_perm"]),
-                "stat_t_abs": float(abs(perm_fit.tvalues["instrument_perm"])),
-                "stat_t2": float(perm_fit.tvalues["instrument_perm"] ** 2),
-                "nobs": int(perm_fit.nobs),
+                "coef": observed_coef,
+                "p_value": permutation_pvalue,
+                "stat_t_abs": float(abs(stat)),
+                "stat_t2": float(stat**2),
+                "nobs": int(round(float(np.mean(permutation_nobs)))),
+                "num_permutations": PLACEBO_PERMUTATIONS,
+                "null_coef_mean": null_mean,
+                "null_coef_std": null_std,
             },
         ]
     )
@@ -460,11 +508,56 @@ def build_phase1_audit(panel: pd.DataFrame, paths: Paths, logs: list[str]) -> di
     )
     gate_table.to_csv(paths.out_audit_tables / "spec_gate_table_v2.csv", index=False)
 
-    preferred_row = first_stage_table.loc[
-        (first_stage_table["instrument"] == PREFERRED_IV) & (first_stage_table["outcome"] == "inflation")
-    ].iloc[0]
-    preferred_stat = float(preferred_row["first_stage_stat"])
-    preferred_p = float(preferred_row["first_stage_p"])
+    # Inference sensitivity snapshot (one-way vs two-way cluster on key specs)
+    iv_core_data = panel[["Country Name", "year", "inflation", "m2_growth", PREFERRED_IV, *RESTRICTED_CONTROLS]].dropna().copy()
+    iv_core_data = iv_core_data.rename(columns={"Country Name": "country"})
+    core_formula = (
+        "inflation ~ 1 + "
+        + " + ".join(RESTRICTED_CONTROLS)
+        + f" + C(country) + C(year) [m2_growth ~ {PREFERRED_IV}]"
+    )
+    one_way = IV2SLS.from_formula(core_formula, data=iv_core_data).fit(cov_type="clustered", clusters=iv_core_data["country"])
+    two_way = IV2SLS.from_formula(core_formula, data=iv_core_data).fit(
+        cov_type="clustered", clusters=int_cluster_columns(iv_core_data)
+    )
+
+    sensitivity = pd.DataFrame(
+        [
+            {
+                "check": "core_iv_inflation_first_stage",
+                "clustering": "country",
+                "first_stage_stat": float(one_way.first_stage.diagnostics.loc["m2_growth", "f.stat"]),
+                "first_stage_p": float(one_way.first_stage.diagnostics.loc["m2_growth", "f.pval"]),
+                "coef": float(one_way.params["m2_growth"]),
+                "p_value": float(one_way.pvalues["m2_growth"]),
+            },
+            {
+                "check": "core_iv_inflation_first_stage",
+                "clustering": "country_year",
+                "first_stage_stat": float(two_way.first_stage.diagnostics.loc["m2_growth", "f.stat"]),
+                "first_stage_p": float(two_way.first_stage.diagnostics.loc["m2_growth", "f.pval"]),
+                "coef": float(two_way.params["m2_growth"]),
+                "p_value": float(two_way.pvalues["m2_growth"]),
+            },
+        ]
+    )
+    sensitivity.to_csv(paths.out_audit_tables / "inference_sensitivity_v2.csv", index=False)
+
+    preferred_country = sensitivity.loc[sensitivity["clustering"] == "country"].iloc[0]
+    preferred_country_year = sensitivity.loc[sensitivity["clustering"] == "country_year"].iloc[0]
+
+    preferred_stat_country = float(preferred_country["first_stage_stat"])
+    preferred_p_country = float(preferred_country["first_stage_p"])
+    preferred_stat_country_year = float(preferred_country_year["first_stage_stat"])
+    preferred_p_country_year = float(preferred_country_year["first_stage_p"])
+
+    # Canonical gate is conservative: use weakest stat / largest p across supported clustering choices.
+    preferred_stat_conservative = min(preferred_stat_country, preferred_stat_country_year)
+    preferred_p_conservative = max(preferred_p_country, preferred_p_country_year)
+
+    relevance_country = bool(preferred_stat_country > CHI2_1_95_CRITICAL and preferred_p_country < 0.05)
+    relevance_country_year = bool(preferred_stat_country_year > CHI2_1_95_CRITICAL and preferred_p_country_year < 0.05)
+    clustering_agrees_on_relevance = bool(relevance_country == relevance_country_year)
 
     gdp_core = core_table[core_table["outcome"] == "gdp_growth"].copy()
     placebo_significant = int((placebo_table["p_value"] < 0.05).sum())
@@ -472,22 +565,28 @@ def build_phase1_audit(panel: pd.DataFrame, paths: Paths, logs: list[str]) -> di
     scorecard = pd.DataFrame(
         [
             {
-                "criterion": "preferred_first_stage_stat_gt_chi2_95",
-                "value": preferred_stat,
+                "criterion": "preferred_first_stage_stat_gt_chi2_95_conservative",
+                "value": preferred_stat_conservative,
                 "threshold": f">{CHI2_1_95_CRITICAL:.4f}",
-                "pass": bool(preferred_stat > CHI2_1_95_CRITICAL),
+                "pass": bool(preferred_stat_conservative > CHI2_1_95_CRITICAL),
             },
             {
-                "criterion": "preferred_first_stage_stat_ge_10_for_strong_iv",
-                "value": preferred_stat,
+                "criterion": "preferred_first_stage_stat_ge_10_for_strong_iv_conservative",
+                "value": preferred_stat_conservative,
                 "threshold": f">={STRONG_IV_STAT_THRESHOLD:.1f}",
-                "pass": bool(preferred_stat >= STRONG_IV_STAT_THRESHOLD),
+                "pass": bool(preferred_stat_conservative >= STRONG_IV_STAT_THRESHOLD),
             },
             {
-                "criterion": "preferred_first_stage_p_lt_0p05",
-                "value": preferred_p,
+                "criterion": "preferred_first_stage_p_lt_0p05_conservative",
+                "value": preferred_p_conservative,
                 "threshold": "<0.05",
-                "pass": bool(preferred_p < 0.05),
+                "pass": bool(preferred_p_conservative < 0.05),
+            },
+            {
+                "criterion": "preferred_relevance_agrees_across_clustering",
+                "value": int(clustering_agrees_on_relevance),
+                "threshold": "1",
+                "pass": bool(clustering_agrees_on_relevance),
             },
             {
                 "criterion": "inflation_positive_sign_at_least_4_of_5",
@@ -524,42 +623,9 @@ def build_phase1_audit(panel: pd.DataFrame, paths: Paths, logs: list[str]) -> di
     powerbi_core["abs_coef"] = powerbi_core["coef_m2_growth"].abs()
     powerbi_core["is_significant_5pct"] = powerbi_core["p_value_m2_growth"] < 0.05
     powerbi_core["recommendation"] = recommendation
+    powerbi_core["preferred_first_stage_stat_conservative"] = preferred_stat_conservative
+    powerbi_core["preferred_first_stage_p_conservative"] = preferred_p_conservative
     powerbi_core.to_csv(paths.out_audit_tables / "powerbi_model_summary_v2.csv", index=False)
-
-    # Inference sensitivity snapshot (one-way vs two-way cluster on key specs)
-    iv_core_data = panel[["Country Name", "year", "inflation", "m2_growth", PREFERRED_IV, *RESTRICTED_CONTROLS]].dropna().copy()
-    iv_core_data = iv_core_data.rename(columns={"Country Name": "country"})
-    core_formula = (
-        "inflation ~ 1 + "
-        + " + ".join(RESTRICTED_CONTROLS)
-        + f" + C(country) + C(year) [m2_growth ~ {PREFERRED_IV}]"
-    )
-    one_way = IV2SLS.from_formula(core_formula, data=iv_core_data).fit(cov_type="clustered", clusters=iv_core_data["country"])
-    two_way = IV2SLS.from_formula(core_formula, data=iv_core_data).fit(
-        cov_type="clustered", clusters=int_cluster_columns(iv_core_data)
-    )
-
-    sensitivity = pd.DataFrame(
-        [
-            {
-                "check": "core_iv_inflation_first_stage",
-                "clustering": "country",
-                "first_stage_stat": float(one_way.first_stage.diagnostics.loc["m2_growth", "f.stat"]),
-                "first_stage_p": float(one_way.first_stage.diagnostics.loc["m2_growth", "f.pval"]),
-                "coef": float(one_way.params["m2_growth"]),
-                "p_value": float(one_way.pvalues["m2_growth"]),
-            },
-            {
-                "check": "core_iv_inflation_first_stage",
-                "clustering": "country_year",
-                "first_stage_stat": float(two_way.first_stage.diagnostics.loc["m2_growth", "f.stat"]),
-                "first_stage_p": float(two_way.first_stage.diagnostics.loc["m2_growth", "f.pval"]),
-                "coef": float(two_way.params["m2_growth"]),
-                "p_value": float(two_way.pvalues["m2_growth"]),
-            },
-        ]
-    )
-    sensitivity.to_csv(paths.out_audit_tables / "inference_sensitivity_v2.csv", index=False)
 
     # Audit figures
     fig, ax = plt.subplots(figsize=(9, 4))
@@ -603,10 +669,15 @@ def build_phase1_audit(panel: pd.DataFrame, paths: Paths, logs: list[str]) -> di
         "gate_table": gate_table,
         "scorecard": scorecard,
         "recommendation": recommendation,
-        "preferred_first_stage_stat": preferred_stat,
-        "preferred_first_stage_p": preferred_p,
-        "preferred_first_stage_relevance_pass": bool(preferred_stat > CHI2_1_95_CRITICAL),
-        "preferred_first_stage_strong_pass": bool(preferred_stat >= STRONG_IV_STAT_THRESHOLD),
+        "preferred_first_stage_stat": preferred_stat_conservative,
+        "preferred_first_stage_p": preferred_p_conservative,
+        "preferred_first_stage_stat_country": preferred_stat_country,
+        "preferred_first_stage_p_country": preferred_p_country,
+        "preferred_first_stage_stat_country_year": preferred_stat_country_year,
+        "preferred_first_stage_p_country_year": preferred_p_country_year,
+        "preferred_first_stage_relevance_pass": bool(preferred_stat_conservative > CHI2_1_95_CRITICAL and preferred_p_conservative < 0.05),
+        "preferred_first_stage_strong_pass": bool(preferred_stat_conservative >= STRONG_IV_STAT_THRESHOLD),
+        "preferred_relevance_agrees_across_clustering": clustering_agrees_on_relevance,
     }
 
 
@@ -771,9 +842,12 @@ def write_summary(paths: Paths, audit: dict, lp: dict, logs: list[str]) -> None:
         "",
         "## Phase 1 Audit V2",
         f"- Recommendation: `{audit['recommendation']}`",
-        f"- Preferred first-stage stat (external IV, inflation spec): `{audit['preferred_first_stage_stat']:.4f}`",
-        f"- Preferred first-stage p-value: `{audit['preferred_first_stage_p']:.4f}`",
-        f"- Preferred first-stage strong-IV threshold (>=10): `{strong_iv_status}`",
+        f"- Preferred first-stage stat (country clustering): `{audit['preferred_first_stage_stat_country']:.4f}`",
+        f"- Preferred first-stage stat (country+year clustering): `{audit['preferred_first_stage_stat_country_year']:.4f}`",
+        f"- Canonical conservative first-stage stat: `{audit['preferred_first_stage_stat']:.4f}`",
+        f"- Canonical conservative first-stage p-value: `{audit['preferred_first_stage_p']:.4f}`",
+        f"- Relevance agreement across clustering choices: `{audit['preferred_relevance_agrees_across_clustering']}`",
+        f"- Preferred first-stage strong-IV threshold (>=10, conservative): `{strong_iv_status}`",
         f"- Max inflation drift across gate specs: `{max_drift:.4f}`",
         f"- Placebo significant tests (p<0.05): `{int((audit['placebo_table']['p_value'] < 0.05).sum())}`",
         "",
