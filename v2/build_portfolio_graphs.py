@@ -14,6 +14,7 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 TABLES_AUDIT = PROJECT_ROOT / "v2/outputs/phase1_audit_v2/tables"
 TABLES_LP = PROJECT_ROOT / "v2/outputs/phase2_short_run_v2/tables"
+CHI2_1_95_CRITICAL = 3.841458820694124
 
 
 def save(fig: plt.Figure, name: str) -> None:
@@ -48,7 +49,7 @@ def chart_first_stage(first_stage: pd.DataFrame) -> None:
 
     fig, ax = plt.subplots(figsize=(11, 6))
     sns.barplot(data=d, x="label", y="first_stage_stat", ax=ax, color="#2a9d8f")
-    ax.axhline(3.841458820694124, color="#e63946", linestyle="--", linewidth=2, label="chi2(1) 95% critical")
+    ax.axhline(CHI2_1_95_CRITICAL, color="#e63946", linestyle="--", linewidth=2, label="chi2(1) 95% critical")
     ax.set_title("First-Stage Strength (Clustered Wald chi2)")
     ax.set_xlabel("")
     ax.set_ylabel("First-stage stat")
@@ -89,7 +90,7 @@ def chart_stability(stability: pd.DataFrame) -> None:
 def chart_placebo(placebo: pd.DataFrame) -> None:
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.barplot(data=placebo, x="test", y="stat_t2", ax=ax, color="#457b9d")
-    ax.axhline(3.841458820694124, color="#e63946", linestyle="--", linewidth=2, label="chi2(1) 95% critical")
+    ax.axhline(CHI2_1_95_CRITICAL, color="#e63946", linestyle="--", linewidth=2, label="chi2(1) 95% critical")
     ax.set_title("Placebo Test Strength")
     ax.set_xlabel("")
     ax.set_ylabel("t-stat squared")
@@ -135,7 +136,7 @@ def chart_lp_first_stage(all_lp: pd.DataFrame) -> None:
 
     fig, ax = plt.subplots(figsize=(10, 6))
     sns.lineplot(data=d, x="horizon", y="first_stage_stat", hue="series", marker="o", linewidth=2.5, ax=ax)
-    ax.axhline(3.841458820694124, color="#e63946", linestyle="--", linewidth=2, label="chi2(1) 95% critical")
+    ax.axhline(CHI2_1_95_CRITICAL, color="#e63946", linestyle="--", linewidth=2, label="chi2(1) 95% critical")
     ax.set_title("First-Stage Strength by Horizon (Instrument x Outcome)")
     ax.set_xlabel("Horizon")
     ax.set_ylabel("First-stage stat")

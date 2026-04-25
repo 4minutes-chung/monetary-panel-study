@@ -57,27 +57,30 @@ function toNumber(value) {
   return Number.isFinite(parsed) ? parsed : NaN;
 }
 
-function pickModel(rows, model, outcome, key) {
-  const row = rows.find((item) => item.model === model && item.outcome === outcome);
+function pickRow(rows, predicate, missingMessage) {
+  const row = rows.find(predicate);
   if (!row) {
-    throw new Error(`Missing model row: model=${model}, outcome=${outcome}`);
+    throw new Error(missingMessage);
   }
+  return row;
+}
+
+function pickModel(rows, model, outcome, key) {
+  const row = pickRow(
+    rows,
+    (item) => item.model === model && item.outcome === outcome,
+    `Missing model row: model=${model}, outcome=${outcome}`
+  );
   return toNumber(row[key]);
 }
 
 function pickCheck(rows, checkName) {
-  const row = rows.find((item) => item.check === checkName);
-  if (!row) {
-    throw new Error(`Missing data audit check: ${checkName}`);
-  }
+  const row = pickRow(rows, (item) => item.check === checkName, `Missing data audit check: ${checkName}`);
   return toNumber(row.value);
 }
 
 function pickMetric(rows, metricName) {
-  const row = rows.find((item) => item.metric === metricName);
-  if (!row) {
-    throw new Error(`Missing metric: ${metricName}`);
-  }
+  const row = pickRow(rows, (item) => item.metric === metricName, `Missing metric: ${metricName}`);
   return toNumber(row.value);
 }
 
@@ -93,12 +96,11 @@ function loadMetrics() {
   const dataSummaryRows = parseCsv(dataSummaryPath);
   const phase2Rows = parseCsv(phase2MetricsPath);
 
-  const firstStageRow = firstStageRows.find(
-    (row) => row.instrument === "instrument_m2_external_level" && row.outcome === "inflation"
+  const firstStageRow = pickRow(
+    firstStageRows,
+    (row) => row.instrument === "instrument_m2_external_level" && row.outcome === "inflation",
+    "Missing first-stage row for external IV inflation model"
   );
-  if (!firstStageRow) {
-    throw new Error("Missing first-stage row for external IV inflation model");
-  }
 
   return {
     countries: pickCheck(dataSummaryRows, "countries"),
