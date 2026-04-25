@@ -19,7 +19,7 @@ node_modules/
 *.log
 *.out
 
-# Notebook-phase generated outputs
+# Notebook-local generated outputs
 outputs/notebook_phase0/
 outputs/notebook_phase1/
 outputs/notebook_phase2/

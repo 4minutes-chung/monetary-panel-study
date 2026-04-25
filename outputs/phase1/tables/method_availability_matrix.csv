@@ -1,7 +1,0 @@
-method,status,condition
-Two-way FE baseline,Runnable,Uses macro_growth_merged.csv
-Robustness pack (winsor + split + LOCO),Runnable,Uses macro_growth_merged.csv
-FE + controls,Scaffold,Needs phase1_controls.csv
-IV / 2SLS,Scaffold,Needs phase1_instruments.csv
-Dynamic panel extension,Scaffold,Template included; requires careful specification checks
-Forecast extension,Scaffold,Template included; benchmark definitions required
