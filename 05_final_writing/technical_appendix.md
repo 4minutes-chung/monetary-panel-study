@@ -69,11 +69,10 @@ Current gate read:
 
 ## Cross-pipeline consistency
 
-Notebook outputs were previously compared against canonical v2 outputs for FE/IV/LP-primary headline metrics.
+Notebook outputs were previously compared against the current script outputs for FE/IV/LP-primary headline metrics.
 
 - Maximum absolute difference: `0.0`
 - Tolerance check (`<= 1e-9`): pass
-- Reference: `docs/NOTEBOOK_V2_PARITY_2026-04-19.md`
 - Current final-package citations should use tracked `04_current_results/` files unless notebook exports are regenerated.
 
 ## Caveats you should keep in mind

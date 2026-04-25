@@ -47,5 +47,5 @@ Across countries, how strongly is money growth associated with inflation and GDP
 ## 7. Open Writing TODO
 
 - Convert draft bullets into full narrative sections.
-- Add direct references to canonical v2 exports for each headline claim.
+- Add direct references to current `04_current_results/` exports for each headline claim.
 - Align wording with executive memo and technical appendix language.

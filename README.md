@@ -36,4 +36,5 @@ Start here: `00_START_HERE.md`.
 python3 -m pip install -r 90_reproduction_scripts/requirements.txt
 python3 90_reproduction_scripts/run_rebuild.py
 python3 90_reproduction_scripts/build_graphs.py
+python3 -m pytest tests -q
 ```

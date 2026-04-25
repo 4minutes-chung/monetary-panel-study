@@ -87,7 +87,7 @@ With the current conservative gate failure, this is best treated as associationa
 
 ## Reproducibility check
 
-Notebook outputs and v2 headline outputs match exactly on key FE/IV/LP-primary numbers.
+Notebook outputs and current script outputs previously matched exactly on key FE/IV/LP-primary numbers.
 
 - Max absolute difference: `0.0`
 - Notebook-vs-script parity was previously checked with max absolute difference `0.0`.
