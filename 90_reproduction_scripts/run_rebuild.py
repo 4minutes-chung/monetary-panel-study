@@ -27,6 +27,14 @@ STRONG_IV_STAT_THRESHOLD = 10.0
 PLACEBO_PERMUTATIONS = 64
 
 
+def infer_claim_tier(interpretation_ready: bool, core_and_diagnostics_ready: bool) -> str:
+    if interpretation_ready:
+        return "causal"
+    if core_and_diagnostics_ready:
+        return "associational"
+    return "exploratory"
+
+
 @dataclass(frozen=True)
 class Paths:
     project_root: Path
@@ -102,8 +110,14 @@ def read_panel(paths: Paths, logs: list[str]) -> pd.DataFrame:
     controls = pd.read_csv(paths.controls_path)
     instruments = pd.read_csv(paths.iv_path)
 
-    panel = base.merge(controls, on=["Country Name", "year"], how="left")
-    panel = panel.merge(instruments, on=["Country Name", "year"], how="left")
+    key_cols = ["Country Name", "year"]
+    for name, frame in [("base", base), ("controls", controls), ("instruments", instruments)]:
+        duplicate_count = int(frame.duplicated(key_cols).sum())
+        if duplicate_count:
+            raise ValueError(f"{name} has duplicate Country Name-year rows: {duplicate_count}")
+
+    panel = base.merge(controls, on=key_cols, how="left", validate="one_to_one")
+    panel = panel.merge(instruments, on=key_cols, how="left", validate="one_to_one")
     panel = panel.sort_values(["Country Name", "year"]).copy()
 
     log(
@@ -130,13 +144,28 @@ def exact_horizon_series(
 
     out_col = out_col or f"{value_col}_h{horizon}"
     if horizon == 0:
-        return target_df[value_col].copy()
+        result = target_df[value_col].copy()
+        result.name = out_col
+        return result
 
     lookup = source_df[[entity_col, time_col, value_col]].dropna(subset=[value_col]).copy()
-    lookup[time_col] = lookup[time_col] - horizon
-    lookup = lookup.rename(columns={value_col: out_col}).drop_duplicates([entity_col, time_col], keep="last")
+    duplicate_keys = lookup.duplicated([entity_col, time_col], keep=False)
+    if bool(duplicate_keys.any()):
+        examples = lookup.loc[duplicate_keys, [entity_col, time_col]].head(5).to_dict("records")
+        raise ValueError(
+            f"Duplicate {entity_col}-{time_col} keys found in source_df for {value_col}; "
+            f"exact horizon matching requires unique keys. Examples: {examples}"
+        )
 
-    aligned = target_df[[entity_col, time_col]].merge(lookup, on=[entity_col, time_col], how="left")
+    lookup[time_col] = lookup[time_col] - horizon
+    lookup = lookup.rename(columns={value_col: out_col})
+
+    aligned = target_df[[entity_col, time_col]].merge(
+        lookup,
+        on=[entity_col, time_col],
+        how="left",
+        validate="many_to_one",
+    )
     return aligned[out_col]
 
 
@@ -615,14 +644,43 @@ def build_phase1_audit(panel: pd.DataFrame, paths: Paths, logs: list[str]) -> di
         ]
     )
 
-    recommendation = "GO_CONTINUE" if bool(scorecard["pass"].all()) else "GO_PIVOT_SHORT_RUN"
-    scorecard["recommendation_if_fail"] = np.where(scorecard["pass"], "", "GO_PIVOT_SHORT_RUN")
+    interpretation_ready = bool(scorecard["pass"].all())
+    inference_decision = "GO_CONTINUE" if interpretation_ready else "GO_PIVOT_SHORT_RUN"
+    failed_criteria = scorecard.loc[~scorecard["pass"], "criterion"].tolist()
+    core_and_diagnostics_ready = bool(
+        len(core_table)
+        and len(first_stage_table)
+        and len(placebo_table)
+        and len(gate_table)
+        and len(scorecard)
+    )
+    claim_tier = infer_claim_tier(
+        interpretation_ready=interpretation_ready,
+        core_and_diagnostics_ready=core_and_diagnostics_ready,
+    )
+
+    interpretation_status = pd.DataFrame(
+        [
+            {
+                "interpretation_ready": interpretation_ready,
+                "claim_tier": claim_tier,
+                "inference_decision": inference_decision,
+                "failed_criteria_count": int(len(failed_criteria)),
+                "failed_criteria": "; ".join(failed_criteria),
+                "generated_at_utc": pd.Timestamp.now("UTC").isoformat(),
+            }
+        ]
+    )
+    interpretation_status.to_csv(paths.out_audit_tables / "interpretation_status.csv", index=False)
+
+    scorecard["inference_decision_if_fail"] = np.where(scorecard["pass"], "", "GO_PIVOT_SHORT_RUN")
     scorecard.to_csv(paths.out_audit_tables / "audit_scorecard.csv", index=False)
 
     powerbi_core = core_table.copy()
     powerbi_core["abs_coef"] = powerbi_core["coef_m2_growth"].abs()
     powerbi_core["is_significant_5pct"] = powerbi_core["p_value_m2_growth"] < 0.05
-    powerbi_core["recommendation"] = recommendation
+    powerbi_core["inference_decision"] = inference_decision
+    powerbi_core["claim_tier"] = claim_tier
     powerbi_core["preferred_first_stage_stat_conservative"] = preferred_stat_conservative
     powerbi_core["preferred_first_stage_p_conservative"] = preferred_p_conservative
     powerbi_core.to_csv(paths.out_audit_tables / "powerbi_model_summary.csv", index=False)
@@ -660,7 +718,7 @@ def build_phase1_audit(panel: pd.DataFrame, paths: Paths, logs: list[str]) -> di
     fig2.savefig(paths.out_audit_figures / "first_stage_and_placebo_strength.png", dpi=170)
     plt.close(fig2)
 
-    log(f"Phase 1 audit completed. Recommendation={recommendation}", logs)
+    log(f"Phase 1 audit completed. InferenceDecision={inference_decision}", logs)
 
     return {
         "core_table": core_table,
@@ -668,7 +726,10 @@ def build_phase1_audit(panel: pd.DataFrame, paths: Paths, logs: list[str]) -> di
         "placebo_table": placebo_table,
         "gate_table": gate_table,
         "scorecard": scorecard,
-        "recommendation": recommendation,
+        "inference_decision": inference_decision,
+        "interpretation_ready": interpretation_ready,
+        "claim_tier": claim_tier,
+        "failed_criteria": failed_criteria,
         "preferred_first_stage_stat": preferred_stat_conservative,
         "preferred_first_stage_p": preferred_p_conservative,
         "preferred_first_stage_stat_country": preferred_stat_country,
@@ -793,6 +854,7 @@ def build_phase2_lp(panel: pd.DataFrame, paths: Paths, logs: list[str]) -> dict:
 
     inflation_sig = int((primary_inflation["p_value"] < 0.05).sum())
     gdp_sig = int((primary_gdp["p_value"] < 0.05).sum())
+    inflation_sig_familywise = int((primary_inflation["p_value"] * max(len(primary_inflation), 1) < 0.05).sum())
 
     metrics = pd.DataFrame(
         [
@@ -806,15 +868,16 @@ def build_phase2_lp(panel: pd.DataFrame, paths: Paths, logs: list[str]) -> dict:
     )
     metrics.to_csv(paths.out_lp_tables / "interpretation_metrics.csv", index=False)
 
-    # Keep the recommendation conservative for portfolio communication.
-    # Even with chi2 significance, we only mark "effect present" when first-stage stats are comfortably strong.
-    lp_recommendation = (
+    # Keep the inference decision conservative for portfolio communication.
+    # Even with chi2 significance, we only mark "effect present" when first-stage stats are comfortably strong
+    # and at least one inflation horizon survives a simple familywise correction.
+    lp_inference_decision = (
         "EVIDENCE_SHORT_RUN_EFFECT_PRESENT"
-        if inflation_sig >= 1 and float(primary["first_stage_stat"].min()) >= 10.0
+        if inflation_sig_familywise >= 1 and float(primary["first_stage_stat"].min()) >= 10.0
         else "EVIDENCE_WEAK_REVISIT_IDENTIFICATION"
     )
 
-    log(f"Phase 2 LP-IV completed. Recommendation={lp_recommendation}", logs)
+    log(f"Phase 2 LP-IV completed. InferenceDecision={lp_inference_decision}", logs)
 
     return {
         "lp_table": lp_table,
@@ -822,43 +885,72 @@ def build_phase2_lp(panel: pd.DataFrame, paths: Paths, logs: list[str]) -> dict:
         "alt": alt,
         "inflation_sig": inflation_sig,
         "gdp_sig": gdp_sig,
-        "lp_recommendation": lp_recommendation,
+        "lp_inference_decision": lp_inference_decision,
     }
 
 
 def write_summary(paths: Paths, audit: dict, lp: dict, logs: list[str]) -> None:
     max_drift = float(audit["gate_table"]["abs_drift_pct"].max())
     strong_iv_status = "PASS" if audit["preferred_first_stage_strong_pass"] else "FAIL"
+    interpretation_ready = bool(audit["interpretation_ready"])
+    claim_tier = str(audit["claim_tier"])
+    failed_criteria = list(audit.get("failed_criteria", []))
+    failed_criteria_str = ", ".join(failed_criteria) if failed_criteria else "none"
+
+    interpretation_scope_lines = (
+        [
+            "- Causal interpretation is allowed only under stated identification assumptions.",
+            "- Policy and counterfactual effect claims are allowed with documented assumptions.",
+        ]
+        if interpretation_ready
+        else [
+            "- Treat all estimates as descriptive association evidence only (non-causal).",
+            "- Forbidden claims: policy-effect statements and counterfactual causal-effect statements.",
+        ]
+    )
 
     summary_lines = [
         "# Current Results Summary",
         "",
-        "## What changed",
+        "## Empirical Design Updates",
         "- Kept exact FE formulas for IV estimation.",
         "- Kept exact calendar-year horizon matching (no row-shift approximation).",
         "- Added explicit no-partial-export checks for LP-IV outputs.",
         "- Added inference sensitivity table comparing one-way vs two-way clustering on key IV spec.",
-        "- Clarified weak-IV read: first-stage is reported as clustered Wald chi2(1), not classic F-stat.",
+        "- Clarified identification validity read: first-stage is reported as clustered Wald chi2(1), not classic F-stat.",
+        "- Reporting language now tracks inference robustness and reproducibility of empirical artifacts.",
         "",
-        "## Phase 1 Audit",
-        f"- Recommendation: `{audit['recommendation']}`",
-        f"- Preferred first-stage stat (country clustering): `{audit['preferred_first_stage_stat_country']:.4f}`",
-        f"- Preferred first-stage stat (country+year clustering): `{audit['preferred_first_stage_stat_country_year']:.4f}`",
-        f"- Canonical conservative first-stage stat: `{audit['preferred_first_stage_stat']:.4f}`",
-        f"- Canonical conservative first-stage p-value: `{audit['preferred_first_stage_p']:.4f}`",
-        f"- Relevance agreement across clustering choices: `{audit['preferred_relevance_agrees_across_clustering']}`",
-        f"- Preferred first-stage strong-IV threshold (>=10, conservative): `{strong_iv_status}`",
-        f"- Max inflation drift across gate specs: `{max_drift:.4f}`",
-        f"- Placebo significant tests (p<0.05): `{int((audit['placebo_table']['p_value'] < 0.05).sum())}`",
+        "## Interpretation Status",
+        f"- INTERPRETATION_READY: `{interpretation_ready}`",
+        f"- Claim tier: `{claim_tier}`",
+        f"- Failed gates: `{failed_criteria_str}`",
+        "- **Forbidden when tier != causal**: policy-effect and counterfactual causal-effect claims.",
+        "",
+        "## Estimand & Assumptions",
+        "- Estimand (associational): panel relationship between `m2_growth` and outcomes under country/time fixed effects.",
+        "- Estimand (IV): local IV estimand for `m2_growth` using specified instruments.",
+        "- Identification assumptions: instrument relevance, exogeneity, and exclusion restriction.",
+        "- Decision rule: failed identification/stability/placebo gates downgrade claims from `causal` to `associational` or `exploratory`.",
+        "",
+        "## Inference Decision",
+        f"- Decision: `{audit['inference_decision']}`",
+        f"- Identification diagnostic stat (country clustering): `{audit['preferred_first_stage_stat_country']:.4f}`",
+        f"- Identification diagnostic stat (country+year clustering): `{audit['preferred_first_stage_stat_country_year']:.4f}`",
+        f"- Conservative identification diagnostic stat: `{audit['preferred_first_stage_stat']:.4f}`",
+        f"- Conservative identification diagnostic p-value: `{audit['preferred_first_stage_p']:.4f}`",
+        f"- Identification relevance agreement across clustering choices: `{audit['preferred_relevance_agrees_across_clustering']}`",
+        f"- Strong-IV threshold status (>=10, conservative): `{strong_iv_status}`",
+        f"- Stability drift (max inflation drift across gate specs): `{max_drift:.4f}`",
+        f"- Placebo tests significant at p<0.05: `{int((audit['placebo_table']['p_value'] < 0.05).sum())}`",
         "",
         "## Phase 2 LP-IV",
-        f"- Recommendation flag: `{lp['lp_recommendation']}`",
-        f"- Primary IV inflation significant horizons (5%): `{lp['inflation_sig']}`",
+        f"- Inference decision flag: `{lp['lp_inference_decision']}`",
+        "- LP horizon p-values are unadjusted; later horizons are exploratory and not decisive without multiple-testing caution.",
+        f"- Primary IV inflation significant horizons (5%, unadjusted): `{lp['inflation_sig']}`",
         f"- Primary IV GDP significant horizons (5%): `{lp['gdp_sig']}` (static h=0 only)",
         "",
-        "## Claim boundary",
-        "- Treat this as strong cross-country association evidence.",
-        "- Causal interpretation remains limited while first-stage strength is weak/moderate.",
+        "## Interpretation Scope",
+        *interpretation_scope_lines,
     ]
 
     (paths.out_root / "summary.md").write_text("\n".join(summary_lines))

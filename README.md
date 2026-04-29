@@ -38,3 +38,24 @@ python3 90_reproduction_scripts/run_rebuild.py
 python3 90_reproduction_scripts/build_graphs.py
 python3 -m pytest tests -q
 ```
+
+## Interpretation Policy (GO/NO-GO)
+
+Canonical artifacts:
+
+- Status contract: `04_current_results/tables/phase1_audit/interpretation_status.csv`
+- Gate diagnostics: `04_current_results/tables/phase1_audit/audit_scorecard.csv`
+
+### Allowed claims by tier
+
+| `claim_tier` | Allowed claims |
+| --- | --- |
+| `causal` | Causal interpretation with explicitly stated identification assumptions. |
+| `associational` | Descriptive association statements only; no causal policy interpretation. |
+| `exploratory` | Exploratory pattern description only; no inferential or policy-effect claims. |
+
+### Forbidden claims when `claim_tier != causal`
+
+- Counterfactual causal-effect claims (for example: “X causes Y by Z points”).
+- Policy-effect claims tied to intervention impact.
+- Language implying identified structural/causal parameters.

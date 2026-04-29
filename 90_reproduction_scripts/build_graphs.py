@@ -15,10 +15,26 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 TABLES_AUDIT = PROJECT_ROOT / "04_current_results/tables/phase1_audit"
 TABLES_LP = PROJECT_ROOT / "04_current_results/tables/short_run_lp"
 CHI2_1_95_CRITICAL = 3.841458820694124
+NON_CAUSAL_MODE = False
+CURRENT_CLAIM_TIER = "exploratory"
+CURRENT_INTERPRETATION_READY = False
 
 
 def save(fig: plt.Figure, name: str) -> None:
-    fig.tight_layout()
+    if NON_CAUSAL_MODE:
+        fig.text(
+            0.5,
+            0.01,
+            "ASSOCIATIONAL EVIDENCE ONLY (IDENTIFICATION NOT PASSED)",
+            ha="center",
+            va="bottom",
+            color="#e63946",
+            fontsize=10,
+            fontweight="bold",
+        )
+        fig.tight_layout(rect=(0, 0.05, 1, 1))
+    else:
+        fig.tight_layout()
     fig.savefig(OUT_DIR / name, dpi=180)
     plt.close(fig)
 
@@ -27,6 +43,40 @@ def read_csv(path: Path) -> pd.DataFrame:
     if not path.exists():
         raise FileNotFoundError(f"Missing required file: {path}")
     return pd.read_csv(path)
+
+
+def _as_bool(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "t"}
+
+
+def load_non_causal_mode() -> bool:
+    status_path = TABLES_AUDIT / "interpretation_status.csv"
+    if not status_path.exists():
+        return False
+    status = pd.read_csv(status_path)
+    if status.empty or "interpretation_ready" not in status.columns:
+        return False
+    interpretation_ready = _as_bool(status.loc[0, "interpretation_ready"])
+    return not interpretation_ready
+
+
+def load_interpretation_status() -> tuple[bool, str]:
+    status_path = TABLES_AUDIT / "interpretation_status.csv"
+    if not status_path.exists():
+        return False, "exploratory"
+    status = pd.read_csv(status_path)
+    if status.empty:
+        return False, "exploratory"
+
+    interpretation_ready = _as_bool(status.loc[0, "interpretation_ready"]) if "interpretation_ready" in status.columns else False
+    claim_tier = str(status.loc[0, "claim_tier"]) if "claim_tier" in status.columns else "exploratory"
+    if claim_tier not in {"exploratory", "associational", "causal"}:
+        claim_tier = "exploratory"
+    return interpretation_ready, claim_tier
 
 
 def chart_core_coefficients(core: pd.DataFrame) -> None:
@@ -90,10 +140,10 @@ def chart_stability(stability: pd.DataFrame) -> None:
 def chart_placebo(placebo: pd.DataFrame) -> None:
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.barplot(data=placebo, x="test", y="stat_t2", ax=ax, color="#457b9d")
-    ax.axhline(CHI2_1_95_CRITICAL, color="#e63946", linestyle="--", linewidth=2, label="chi2(1) 95% critical")
-    ax.set_title("Placebo Test Strength")
+    ax.axhline(CHI2_1_95_CRITICAL, color="#e63946", linestyle="--", linewidth=2, label="chi2(1) 95% reference")
+    ax.set_title("Placebo Diagnostics (lead t^2; permutation standardized score^2)")
     ax.set_xlabel("")
-    ax.set_ylabel("t-stat squared")
+    ax.set_ylabel("Squared diagnostic statistic")
     ax.legend()
     save(fig, "05_placebo_strength.png")
 
@@ -197,11 +247,24 @@ def chart_country_rankings(panel: pd.DataFrame) -> None:
 
 
 def write_manifest() -> None:
-    rows = [{"file": p.name} for p in sorted(OUT_DIR.glob("*.png"))]
+    status_header = f"claim_tier={CURRENT_CLAIM_TIER}; interpretation_ready={CURRENT_INTERPRETATION_READY}"
+    rows = [
+        {
+            "file": p.name,
+            "claim_tier": CURRENT_CLAIM_TIER,
+            "interpretation_ready": CURRENT_INTERPRETATION_READY,
+            "status_header": status_header,
+        }
+        for p in sorted(OUT_DIR.glob("*.png"))
+    ]
     pd.DataFrame(rows).to_csv(OUT_DIR / "portfolio_graph_manifest.csv", index=False)
 
 
 def main() -> None:
+    global NON_CAUSAL_MODE, CURRENT_CLAIM_TIER, CURRENT_INTERPRETATION_READY
+    CURRENT_INTERPRETATION_READY, CURRENT_CLAIM_TIER = load_interpretation_status()
+    NON_CAUSAL_MODE = not CURRENT_INTERPRETATION_READY
+
     core = read_csv(TABLES_AUDIT / "core_model_results.csv")
     first_stage = read_csv(TABLES_AUDIT / "first_stage_strength.csv")
     gate = read_csv(TABLES_AUDIT / "spec_gate_table.csv")

@@ -15,7 +15,7 @@ Across countries, how strongly is money growth linked to inflation and GDP growt
 ## Main Findings
 1. Inflation relationship is strong and persistent.
 2. GDP-growth relationship is weak and not robust.
-3. Preferred external-IV first-stage passes under country clustering but fails the conservative country+year gate and the strong-IV threshold (>=10).
+3. Preferred external-IV first-stage is statistically nonzero under country clustering, but fails the conservative country+year gate and the strong-IV threshold (>=10).
 4. Short-run inflation responses are statistically positive in the primary LP-IV path, but identification strength remains limited.
 
 ## Interpretation Boundary

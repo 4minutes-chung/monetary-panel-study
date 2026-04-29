@@ -20,6 +20,7 @@ SPEC.loader.exec_module(run_rebuild)
 
 empirical_two_sided_pvalue = run_rebuild.empirical_two_sided_pvalue
 exact_horizon_series = run_rebuild.exact_horizon_series
+infer_claim_tier = run_rebuild.infer_claim_tier
 sample_derangement = run_rebuild.sample_derangement
 
 
@@ -51,6 +52,63 @@ def test_sample_derangement_requires_two_values() -> None:
     rng = np.random.default_rng(42)
     with pytest.raises(ValueError, match="at least two"):
         sample_derangement(np.array(["A"]), rng)
+
+
+def test_exact_horizon_series_horizon_zero_uses_out_col_name() -> None:
+    source = pd.DataFrame(
+        {
+            "Country Name": ["A", "A"],
+            "year": [2000, 2001],
+            "inflation": [10.0, 11.0],
+        }
+    )
+    result = exact_horizon_series(source_df=source, target_df=source, value_col="inflation", horizon=0)
+    assert result.name == "inflation_h0"
+
+
+def test_exact_horizon_series_horizon_zero_respects_custom_out_col() -> None:
+    source = pd.DataFrame(
+        {
+            "Country Name": ["A", "A"],
+            "year": [2000, 2001],
+            "inflation": [10.0, 11.0],
+        }
+    )
+    result = exact_horizon_series(
+        source_df=source,
+        target_df=source,
+        value_col="inflation",
+        horizon=0,
+        out_col="inflation_now",
+    )
+    expected = pd.Series([10.0, 11.0], name="inflation_now")
+    pd.testing.assert_series_equal(result.reset_index(drop=True), expected, check_dtype=False)
+
+
+def test_exact_horizon_series_rejects_duplicate_source_keys() -> None:
+    source = pd.DataFrame(
+        {
+            "Country Name": ["A", "A", "A"],
+            "year": [2000, 2000, 2001],
+            "inflation": [10.0, 12.0, 11.0],
+        }
+    )
+    target = pd.DataFrame(
+        {
+            "Country Name": ["A", "A"],
+            "year": [2000, 2001],
+            "inflation": [10.0, 11.0],
+        }
+    )
+
+    with pytest.raises(ValueError, match="Duplicate"):
+        exact_horizon_series(source_df=source, target_df=target, value_col="inflation", horizon=1)
+
+
+def test_infer_claim_tier_mapping() -> None:
+    assert infer_claim_tier(interpretation_ready=True, core_and_diagnostics_ready=True) == "causal"
+    assert infer_claim_tier(interpretation_ready=False, core_and_diagnostics_ready=True) == "associational"
+    assert infer_claim_tier(interpretation_ready=False, core_and_diagnostics_ready=False) == "exploratory"
 
 
 def test_exact_horizon_series_matches_by_entity_and_year() -> None:

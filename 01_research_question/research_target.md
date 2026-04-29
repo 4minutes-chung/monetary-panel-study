@@ -29,8 +29,14 @@ Objective A:
 
 Objective B:
 
-- Estimate FE and IV relationships for inflation and GDP growth.
-- Estimate LP-IV short-run dynamics for inflation (h=0..3) and GDP growth (h=0).
+Do countries that adopt inflation targeting show a structural break in the money-inflation relationship?
+
+- Obj A establishes the pre-adoption cross-section (Lucas-style long-run facts).
+- Obj B estimates the dynamic post-adoption path using an LP event-study around IT adoption dates.
+- Identification assumption: IT adoption date is a policy event, more plausibly exogenous than depth × fedfunds.
+- Control group: never-adopters and not-yet-adopters; staggered adoption requires Callaway-Sant'Anna or Sun-Abraham DiD estimator.
+- Key outcomes: inflation level, inflation variance, and the money-inflation pass-through coefficient post-adoption.
+- Data needed: IT adoption dates CSV (Roger 2010 IMF WP list) — everything else already exists.
 
 ## 2. Claim Boundary
 
