@@ -246,6 +246,40 @@ def chart_country_rankings(panel: pd.DataFrame) -> None:
     save(fig2, "13_country_means_m2_vs_inflation.png")
 
 
+def chart_phillips_forecast() -> None:
+    skill_path = TABLES_AUDIT / "phillips_forecast_skill.csv"
+    pred_path = TABLES_AUDIT / "phillips_forecast_predictions.csv"
+    if not skill_path.exists() or not pred_path.exists():
+        return
+    skill = pd.read_csv(skill_path)
+    pred = pd.read_csv(pred_path)
+    aug = pred[pred["model"] == "phillips_augmented"].copy()
+    if aug.empty:
+        return
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+    skill_sorted = skill.set_index("model").reindex(["naive_ar1", "phillips", "phillips_augmented"]).reset_index()
+    sns.barplot(data=skill_sorted, x="model", y="rmse", ax=axes[0], color="#264653")
+    axes[0].set_title("Holdout RMSE by forecast model")
+    axes[0].set_xlabel("")
+    axes[0].set_ylabel("RMSE (holdout 2016+)")
+    for i, row in skill_sorted.iterrows():
+        axes[0].text(i, row["rmse"], f"{row['rmse']:.3f}", ha="center", va="bottom", fontsize=11)
+
+    lim = float(max(aug["inflation"].abs().max(), aug["pred"].abs().max()))
+    lim = min(lim, 1.0)
+    axes[1].plot([-lim, lim], [-lim, lim], color="#a8a8a8", linestyle="--", linewidth=1)
+    axes[1].scatter(aug["inflation"], aug["pred"], alpha=0.4, s=20, color="#e76f51")
+    axes[1].set_xlim(-lim, lim)
+    axes[1].set_ylim(-lim, lim)
+    axes[1].set_title("Augmented Phillips: predicted vs actual (holdout)")
+    axes[1].set_xlabel("Actual inflation")
+    axes[1].set_ylabel("Predicted inflation")
+
+    save(fig, "14_phillips_forecast.png")
+
+
 def write_manifest() -> None:
     status_header = f"claim_tier={CURRENT_CLAIM_TIER}; interpretation_ready={CURRENT_INTERPRETATION_READY}"
     rows = [
@@ -290,6 +324,7 @@ def main() -> None:
     chart_scatter(panel, "m2_growth", "inflation", "Scatter: Money Growth vs Inflation", "10_scatter_m2_vs_inflation.png")
     chart_scatter(panel, "m2_growth", "gdp_growth", "Scatter: Money Growth vs GDP Growth", "11_scatter_m2_vs_gdp_growth.png")
     chart_country_rankings(panel)
+    chart_phillips_forecast()
 
     write_manifest()
     print(f"Portfolio graphs written to: {OUT_DIR}")

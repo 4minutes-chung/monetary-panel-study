@@ -1,7 +1,9 @@
 metric,value
 inflation_sig_horizons_primary,4
+inflation_sig_horizons_primary_holm,4
 gdp_sig_horizons_primary,0
 gdp_horizon_mode_primary,static_h0_only
-mean_first_stage_stat_primary,4.5385587563562675
-mean_first_stage_stat_alt_lag,4.815328771325094
-min_first_stage_stat_primary,4.224306224320861
+mean_first_stage_stat_primary,5.222929267558712
+mean_first_stage_stat_alt_lag,2.992354064785796
+min_first_stage_stat_primary,5.222929267558712
+fixed_sample_rows,2972

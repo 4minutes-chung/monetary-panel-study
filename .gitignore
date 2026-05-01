@@ -25,3 +25,8 @@ outputs/notebook_phase1/
 outputs/notebook_phase2/
 03_analysis_notebooks/exports/
 
+# Local planning scratch
+.cursor/
+
+CrossCountryMonetary_PDFs
+

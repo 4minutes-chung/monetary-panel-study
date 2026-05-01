@@ -1,12 +1,10 @@
 # Current Results Summary
 
-## Empirical Design Updates
-- Kept exact FE formulas for IV estimation.
-- Kept exact calendar-year horizon matching (no row-shift approximation).
-- Added explicit no-partial-export checks for LP-IV outputs.
-- Added inference sensitivity table comparing one-way vs two-way clustering on key IV spec.
-- Clarified identification validity read: first-stage is reported as clustered Wald chi2(1), not classic F-stat.
-- Reporting language now tracks inference robustness and reproducibility of empirical artifacts.
+## Narrative (Lucas → AVERAGE → YoY → IT regime)
+- Intro (Lucas): the long-run cross-country money-inflation slope is the benchmark object the report tests.
+- Objective A (AVERAGE, descriptive): country-mean money growth is strongly associated with country-mean inflation; GDP links are weaker.
+- Objective B (YoY, exploratory): within-country short-run dynamics are smaller and sensitivity-dependent — the AVG vs YoY wedge is the report's main finding.
+- Objective C (IT regime, exploratory probe): inflation-targeting adoption is reported as a regime moderator on the YoY slope, caveat-first.
 
 ## Interpretation Status
 - INTERPRETATION_READY: `False`
@@ -15,13 +13,13 @@
 - **Forbidden when tier != causal**: policy-effect and counterfactual causal-effect claims.
 
 ## Estimand & Assumptions
-- Estimand (associational): panel relationship between `m2_growth` and outcomes under country/time fixed effects.
-- Estimand (IV): local IV estimand for `m2_growth` using specified instruments.
-- Identification assumptions: instrument relevance, exogeneity, and exclusion restriction.
-- Decision rule: failed identification/stability/placebo gates downgrade claims from `causal` to `associational` or `exploratory`.
+- Objective A (AVERAGE) estimand: Lucas-style long-run country-mean associations (between-country slope).
+- Objective B (YoY) estimand: short-run within-country dynamic associations (Phillips + LP-IV), exploratory with fixed-sample lock and Holm correction.
+- Objective C (IT regime) estimand: slope-shift moderator on the YoY money-inflation pass-through (`post_it × treated × m2_growth`); level event-study reported as appendix companion only.
+- Decision rule: failed identification/stability/placebo gates keep claims non-causal.
 
-## Inference Decision
-- Decision: `GO_PIVOT_SHORT_RUN`
+## Conservative Diagnostics Snapshot
+- Inference decision flag: `GO_PIVOT_SHORT_RUN`
 - Identification diagnostic stat (country clustering): `4.2243`
 - Identification diagnostic stat (country+year clustering): `3.8016`
 - Conservative identification diagnostic stat: `3.8016`
@@ -31,9 +29,21 @@
 - Stability drift (max inflation drift across gate specs): `0.8750`
 - Placebo tests significant at p<0.05: `1`
 
-## Phase 2 LP-IV
+## Objective B (YoY — Phillips Curve + Inflation Forecast)
+- In-sample TWFE Phillips (baseline): inflation_l1 coef=`0.5974` (p=`0.0000`), output_gap_hp coef=`-0.1043` (p=`0.3524`), within R²=`0.5481`, n=`4102`.
+- In-sample TWFE Phillips (augmented +m2_growth): inflation_l1 coef=`0.4658` (p=`0.0000`), output_gap_hp coef=`-0.1530` (p=`0.1061`), m2_growth coef=`0.2925` (p=`0.0050`), within R²=`0.6594`.
+- Holdout forecast (train ≤ 2015, test 2016–2020, country FE only):
+  - `naive_ar1`: RMSE=`0.0758`, MAE=`0.0275`, bias=`+0.0056`, n=`721` rows / `151` countries.
+  - `phillips`: RMSE=`0.0758`, MAE=`0.0275`, bias=`+0.0055`, n=`721` rows / `151` countries.
+  - `phillips_augmented`: RMSE=`0.0635`, MAE=`0.0294`, bias=`-0.0035`, n=`721` rows / `151` countries.
+- RMSE gain (augmented Phillips vs naive AR(1)): `16.2%`.
+
+## Objective B (YoY — Short-Run LP-IV)
 - Inference decision flag: `EVIDENCE_WEAK_REVISIT_IDENTIFICATION`
-- Primary IV inflation significant horizons (5%): `4`
+- LP horizon estimates use a fixed sample lock across horizons.
+- LP horizon familywise control uses Holm correction for inflation horizons.
+- Primary IV inflation significant horizons (5%, unadjusted): `4`
+- Primary IV inflation significant horizons (5%, Holm): `4`
 - Primary IV GDP significant horizons (5%): `0` (static h=0 only)
 
 ## Interpretation Scope

@@ -1,5 +1,7 @@
 # Technical Appendix (Simple, Traceable Version, 2026-04-19)
 
+**Narrative authority:** Prefer `01_research_question/research_target.md` for objective labels (Lucas → AVERAGE → YoY → IT regime). Older labels **Phase 1 / Phase 2** appear in scripts as pipeline stage names (“Phase 1 audit”, “Phase 2 LP‑IV”), not objective letters.
+
 ## What this file is for
 
 This is the "show me exactly where the number came from" file.

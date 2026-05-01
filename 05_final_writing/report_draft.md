@@ -1,121 +1,83 @@
-# Final Report (Concise)
+# Final Report Draft
 
-## 1. Research question
-Across countries, how strongly is money growth associated with inflation and GDP growth, and what can be responsibly claimed under conservative identification checks?
+## 1. Introduction (Lucas)
 
-Contract authority for claim boundary and identification gates:
-- `01_research_question/research_target.md`
-- `01_research_question/claim_boundary.md`
+This report studies how money growth relates to inflation and GDP growth across 163 countries from 1991 to 2020.
 
-## 2. Executive summary (what you can say)
-- **Inflation**: money growth is **positively and robustly associated** with inflation in the core panel specifications.
-- **GDP growth**: the relationship is **weak and not robust** in the same core specifications.
-- **Causality boundary**: the conservative identification gate fails and multiple diagnostics fail, so interpretation is **associational**, with IV/LP-IV treated as **directionally informative but weak-identification-sensitive**.
+The starting reference is Lucas (1980): in long-run cross-country data, money growth and inflation are expected to move close to one-for-one; the paper’s **second** illustration links money growth to **nominal interest rates** (U.S. quarterly T-bills plus filtered series). This report’s panel has no comparable interest-rate field, so Obj A focuses on the money–inflation long average and adds a separate **descriptive** money–GDP country mean, not Lucas’s T-bill replication.
 
-Canonical “current results” entrypoint: `04_current_results/summary.md`.
+The contribution is the **wedge between the long-run AVERAGE estimate and the short-run YoY estimate** — and whether IT adoption explains that gap.
 
-## 3. Data (panel window and units)
-Panel window and sample integrity checks are recorded in:
-- `04_current_results/tables/phase1_audit/data_audit_summary.csv`
-- `04_current_results/tables/phase1_audit/data_audit_missingness.csv`
-- `04_current_results/tables/phase1_audit/leakage_flags.csv`
+## 2. Data and panel
 
-Key facts (units are decimal rates, `0.01 = 1` percentage point):
-- Rows: **4,292**
-- Countries: **163**
-- Years: **1991–2020**
+- 163 countries, 1991–2020, 4,292 rows.
+- Inputs: `02_data/analysis_ready/macro_growth_merged.csv`, `02_data/supporting/phase1_controls.csv`, `02_data/supporting/phase1_instruments.csv`.
+- Output gap: `output_gap_hp` from annual HP filter (`lambda = 6.25`).
+- IT adoption dates: `02_data/supporting/it_adoption_dates.csv` (Roger 2010 + Hammond 2012 reconciliation column).
 
-Source of record: `05_final_writing/technical_appendix.md` (Claim-to-table map).
+## 3. Objective A — AVERAGE (Lucas-style long-run)
 
-## 4. Methods (what was estimated)
-This project is organized into two evidence layers:
+Country-mean money growth regressed on country-mean inflation; same for GDP growth. This matches the **first** quantity-theoretic idea in Lucas (1980) (money and inflation in long averages). Lucas’s **second** illustration in that paper uses **nominal interest rates** (U.S. T-bills with filtered money and inflation), not GDP growth; **this panel has no harmonized interest-rate series**, so leg (ii) is not replicated here — the money–GDP figure is an extra descriptive slice for the real margin only.
 
-### Phase 1: Panel FE and IV baselines
-Core estimates are stored in:
+Read this section for: the long-run cross-country slope and its implied super-neutrality on GDP.
+
+Sources:
+
+- `03_analysis_notebooks/01_lucas_replication.ipynb`
+- `04_current_results/figures/13_country_means_m2_vs_inflation.png`
+
+## 4. Objective B — YoY (short-run within-country)
+
+Same panel, but the estimand changes: within-country year-on-year variation. Three estimators:
+
+1. Two-way fixed-effects regression of inflation (and GDP growth) on money growth.
+2. Phillips block: lagged inflation + output gap predicting current inflation.
+3. LP-IV horizons under fixed-sample lock and Holm familywise correction across inflation horizons.
+
+Read this section for: the short-run pass-through and how it differs from Section 3.
+
+Sources:
+
+- `03_analysis_notebooks/02_panel_fe_iv_baseline.ipynb`
+- `03_analysis_notebooks/03_short_run_lp_iv.ipynb`
 - `04_current_results/tables/phase1_audit/core_model_results.csv`
-
-Identification diagnostics and gates are stored in:
-- `04_current_results/tables/phase1_audit/inference_sensitivity.csv`
-- `04_current_results/tables/phase1_audit/audit_scorecard.csv`
-- `04_current_results/tables/phase1_audit/spec_gate_table.csv`
-- `04_current_results/tables/phase1_audit/placebo_tests.csv`
-- `04_current_results/tables/phase1_audit/spec_stability_table.csv`
-
-### Phase 2: Short-run LP-IV (horizons)
-LP-IV outputs are stored in:
 - `04_current_results/tables/short_run_lp/lp_iv_primary_results.csv`
-- `04_current_results/tables/short_run_lp/interpretation_metrics.csv`
 
-## 5. Results (tables first)
+## 5. Objective C — IT as a regime moderator (exploratory probe)
 
-### 5.1 Phase 1: FE baselines (associational backbone)
-From `04_current_results/tables/phase1_audit/core_model_results.csv`:
-- FE baseline inflation coefficient on money growth: **0.5706** (p = **2.83e-06**)
-- FE baseline GDP growth coefficient on money growth: **-0.0080** (p = **0.3951**)
+Caveats first:
 
-Interpretation: the inflation relationship is statistically clear; GDP growth is not.
+1. IT adoption is endogenous to prior inflation history.
+2. IT dates differ across Roger (2010) and Hammond (2012).
+3. A level-shift estimand and a slope-shift estimand are not the same object.
 
-### 5.2 Phase 1: IV (external instrument) — informative but not gate-passing
-From `04_current_results/tables/phase1_audit/core_model_results.csv`:
-- IV external inflation coefficient: **1.0327** (p = **1.04e-04**)
-- IV external GDP growth coefficient: **-0.1196** (p = **0.1570**)
+Headline probe: slope-shift interaction `post_it × treated × m2_growth` on inflation. This asks whether the YoY money-inflation slope from Section 4 is moderated by the IT regime.
 
-First-stage diagnostics (preferred spec) are recorded in:
-- `04_current_results/tables/phase1_audit/inference_sensitivity.csv`
+Companion (appendix-tier): TWFE event-study on inflation levels for the same adopter set.
 
-Conservative gate logic (min stat / max p across clustering choices) is the authority standard.
-Current conservative read:
-- Country-clustered stat: **4.2243** (p = **0.0398**)
-- Country+year clustered stat: **3.8016** (p = **0.0512**)
-- **Conservative relevance gate: FAIL**
-- **Strong-IV threshold (>=10): FAIL**
+The section is exploratory; no causal policy claim is made in this cycle.
 
-Implication: IV magnitudes are directionally consistent with the inflation association, but inference is weak-identification-sensitive and should not be used for strong causal policy elasticities.
+Sources:
 
-### 5.3 Phase 2: LP-IV short-run inflation dynamics (h = 0..3)
-From `04_current_results/tables/short_run_lp/lp_iv_primary_results.csv`:
-- Inflation: h0 **1.0327**, h1 **0.6572**, h2 **0.5697**, h3 **0.5451**
-- GDP growth (static h0): **-0.1196**
+- `03_analysis_notebooks/04_did_it_event_study.ipynb`
+- `04_current_results/tables/short_run_lp/lp_iv_it_stratified.csv`
 
-Interpretation metric summary is recorded in:
-- `04_current_results/tables/short_run_lp/interpretation_metrics.csv`
+## 6. Diagnostics and limits
 
-Key caution: horizon-by-horizon p-values are unadjusted for multiple testing; later horizons (h2–h3) should be treated as suggestive.
+- Conservative first-stage gate is authoritative (`min stat`, `max p` across clustering choices).
+- IV and LP-IV are retained in the YoY section as directional, not causal, evidence.
+- Placebo, drift, and weak-IV issues are transparency constraints on interpretation.
 
-## 6. Identification and diagnostics (what limits claims)
-The project’s conservative “do not overclaim” boundary is not optional; it follows from the scorecard recorded in:
+Sources:
+
 - `04_current_results/tables/phase1_audit/audit_scorecard.csv`
+- `04_current_results/tables/phase1_audit/spec_stability_table.csv`
 - `04_current_results/tables/phase1_audit/placebo_tests.csv`
+- `04_current_results/summary.md`
 
-Current diagnostic issues to keep visible in any presentation:
-- Conservative relevance gate fails.
-- Strong-IV label fails.
-- Stability drift exceeds the contract threshold.
-- One placebo test is significant.
+## 7. Conclusion
 
-Contract recommendation: `GO_PIVOT_SHORT_RUN` (see `04_current_results/summary.md`).
-
-## 7. Figures (graph support, not primary evidence)
-All figures are rebuildable and stored in `04_current_results/figures/`:
-- `01_core_coefficients.png`
-- `02_first_stage_strength.png`
-- `03_gate_drift.png`
-- `05_placebo_strength.png`
-- `06_lp_inflation_paths.png`
-- `07_lp_gdp_h0_compare.png`
-
-Figure inventory: `04_current_results/figures/graph_inventory.md`.
-
-## 8. Reproducibility (how to regenerate outputs)
-Canonical rebuild path:
-- `python3 90_reproduction_scripts/run_rebuild.py`
-- `python3 90_reproduction_scripts/build_graphs.py`
-
-Run status snapshot is recorded in:
-- `04_current_results/run_log.md`
-
-## 9. What is “done”
-This package is done when:
-- All headline numbers in `05_final_writing/` map to existing `04_current_results/` files (see `05_final_writing/technical_appendix.md`).
-- Wording follows `01_research_question/claim_boundary.md` (association-first; no strong causal language).
-- The rebuild scripts reproduce the same outputs without manual intervention.
+- The AVERAGE estimate is consistent with a strong cross-country money-inflation association.
+- The YoY estimate is smaller and sensitivity-dependent — that gap is the report's main finding.
+- IT regime probes are consistent with regime moderation but do not pass causal gates.
+- A dedicated causal policy evaluation of inflation targeting is reserved for a future cycle.

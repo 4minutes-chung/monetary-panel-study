@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -54,6 +55,7 @@ def make_temp_paths(tmp_path: Path):
         base_path=tmp_path / "02_data/analysis_ready/macro_growth_merged.csv",
         controls_path=tmp_path / "02_data/supporting/phase1_controls.csv",
         iv_path=tmp_path / "02_data/supporting/phase1_instruments.csv",
+        it_dates_path=tmp_path / "02_data/supporting/it_adoption_dates.csv",
         region_map_path=tmp_path / "02_data/supporting/region_map_worldbank_2026-03-26.csv",
         m2_raw_path=tmp_path / "02_data/raw/m2_raw.csv",
         out_root=out_root,
@@ -83,6 +85,12 @@ def write_panel_inputs(paths, panel: pd.DataFrame, *, duplicate_controls: bool =
     base.to_csv(paths.base_path, index=False)
     controls.to_csv(paths.controls_path, index=False)
     instruments.to_csv(paths.iv_path, index=False)
+    pd.DataFrame(
+        [
+            {"country": "Aland", "it_adoption_year_roger2010": 2005, "it_adoption_year_hammond2012": 2005},
+            {"country": "Borland", "it_adoption_year_roger2010": np.nan, "it_adoption_year_hammond2012": np.nan},
+        ]
+    ).to_csv(paths.it_dates_path, index=False)
 
 
 def fake_lp_row(outcome: str, horizon: int, instrument: str) -> dict:
@@ -119,7 +127,9 @@ def test_build_phase2_lp_raises_when_any_spec_fails(
 ) -> None:
     paths = make_temp_paths(tmp_path)
 
-    def fake_run_lp_iv(_panel: pd.DataFrame, outcome: str, horizon: int, instrument: str) -> dict:
+    def fake_run_lp_iv(
+        _panel: pd.DataFrame, outcome: str, horizon: int, instrument: str, fixed_mask: pd.Series | None = None
+    ) -> dict:
         if outcome == "inflation" and horizon == 3 and instrument == "instrument_m2_l1":
             raise RuntimeError("synthetic estimation failure")
         return fake_lp_row(outcome=outcome, horizon=horizon, instrument=instrument)
@@ -137,7 +147,9 @@ def test_build_phase2_lp_writes_complete_exports(
 ) -> None:
     paths = make_temp_paths(tmp_path)
 
-    def fake_run_lp_iv(_panel: pd.DataFrame, outcome: str, horizon: int, instrument: str) -> dict:
+    def fake_run_lp_iv(
+        _panel: pd.DataFrame, outcome: str, horizon: int, instrument: str, fixed_mask: pd.Series | None = None
+    ) -> dict:
         return fake_lp_row(outcome=outcome, horizon=horizon, instrument=instrument)
 
     monkeypatch.setattr(run_rebuild, "run_lp_iv", fake_run_lp_iv)
@@ -158,7 +170,7 @@ def test_build_phase2_lp_writes_complete_exports(
     assert len(primary) == 5
     assert len(alt) == 5
     assert len(summary) == 10
-    assert len(metrics) == 6
+    assert len(metrics) == 8
     assert set(primary["instrument"]) == {"instrument_m2_external_level"}
     assert set(alt["instrument"]) == {"instrument_m2_l1"}
 
@@ -172,7 +184,9 @@ def test_build_phase2_lp_keeps_exploratory_status_when_familywise_check_fails(
 ) -> None:
     paths = make_temp_paths(tmp_path)
 
-    def fake_run_lp_iv(_panel: pd.DataFrame, outcome: str, horizon: int, instrument: str) -> dict:
+    def fake_run_lp_iv(
+        _panel: pd.DataFrame, outcome: str, horizon: int, instrument: str, fixed_mask: pd.Series | None = None
+    ) -> dict:
         row = fake_lp_row(outcome=outcome, horizon=horizon, instrument=instrument)
         row["first_stage_stat"] = 12.0
         row["first_stage_p"] = 0.004
@@ -360,15 +374,16 @@ def test_write_summary_includes_non_causal_guardrail(tmp_path: Path) -> None:
     lp = {
         "lp_inference_decision": "EVIDENCE_WEAK_REVISIT_IDENTIFICATION",
         "inflation_sig": 4,
+        "inflation_sig_holm": 2,
         "gdp_sig": 0,
     }
 
     run_rebuild.write_summary(paths, audit=audit, lp=lp, logs=["ok"])
     summary = (paths.out_root / "summary.md").read_text()
 
-    assert "## Empirical Design Updates" in summary
+    assert "## Narrative (Lucas \u2192 AVERAGE \u2192 YoY \u2192 IT regime)" in summary
     assert "## Estimand & Assumptions" in summary
-    assert "## Inference Decision" in summary
+    assert "## Conservative Diagnostics Snapshot" in summary
     assert "## Interpretation Scope" in summary
     assert "INTERPRETATION_READY: `False`" in summary
     assert "Claim tier: `associational`" in summary
@@ -399,6 +414,7 @@ def test_write_summary_includes_causal_scope_when_all_pass(tmp_path: Path) -> No
     lp = {
         "lp_inference_decision": "EVIDENCE_SHORT_RUN_EFFECT_PRESENT",
         "inflation_sig": 4,
+        "inflation_sig_holm": 2,
         "gdp_sig": 0,
     }
 
@@ -431,6 +447,7 @@ def test_write_summary_includes_exploratory_scope_when_diagnostics_not_ready(tmp
     lp = {
         "lp_inference_decision": "EVIDENCE_WEAK_REVISIT_IDENTIFICATION",
         "inflation_sig": 0,
+        "inflation_sig_holm": 0,
         "gdp_sig": 0,
     }
 

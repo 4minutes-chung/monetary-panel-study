@@ -12,9 +12,9 @@ Notebook ↔ objective: **`01`** = A; **`02`** = YoY baseline + Phillips + forec
 
 | # | Repo hook | Paper (short citation) | Where / type | Why here |
 |---|-----------|------------------------|--------------|----------|
-| 1 | Intro / framing | Lucas, R.E. (1980) — *Two Illustrations of the Quantity Theory of Money* | *American Economic Review* | Obj A verbal benchmark: **(i)** money–inflation long run; **(ii)** in the paper, money–**nominal interest** (US T-bill); we only echo **(i)** in cross-country means — see `research_target` / notebook `01` for rate gap. |
+| 1 | Intro / framing | Lucas, R.E. (1980) — *Two Illustrations of the Quantity Theory of Money* | *American Economic Review* | Obj A verbal benchmark: what cross-country averages are supposed to show. |
 | 2 | Obj A figures | McCandless, G.T. Jr. & Weber, W.E. (1995) — *Some Monetary Facts* | *Minneapolis Fed Quarterly Review* | Classic long-run scatter / correlations your country-means visuals echo. |
-| 3 | Obj A wedge | **De Grauwe, P. & Polan, M. (2005)** — *Is Inflation Always and Everywhere a Monetary Phenomenon?* | *Scandinavian Journal of Economics* | Splits low- vs high-inflation panels — links AVERAGE strength to inflation level / regime heterogeneity. |
+| 3 | Obj A wedge | Lucas (1980) already; add **De Grauwe, P. & Polan, M. (2005)** — *Is Inflation Always and Everywhere a Monetary Phenomenon?* | *Scandinavian Journal of Economics* | Splits low- vs high-inflation panels — links AVERAGE strength to inflation level / regime heterogeneity. |
 | 4 | Obj A persistence + Obj B wedge | **Sargent, T.J. & Surico, P. (2011)** — *Two Illustrations of the Quantity Theory of Money* | *American Economic Review* | Money–inflation link weakens when inflation is anchored — bridges long-run AVG to short-run skepticism about pass-through. |
 | 5 | Obj B YoY Phillips | **Galí, J. & Gertler, M. (1999)** — *Inflation dynamics: A structural econometric analysis* | *Journal of Monetary Economics* | Lag inflation + slack / forward-looking block — aligns with Phillips spec in **`02`** (persistence + output gap frame). |
 | 6 | Obj B forecast sanity | **Atkeson, A. & Ohanian, L.E. (2001)** — *Are Phillips curves useful for forecasting inflation?* | *Federal Reserve Bank of Minneapolis Quarterly Review* | Why naive / simple beats fancy for inflation — legitimizes forecast comparison + RMSE table in **`02`** / `phillips_forecast_skill.csv`. |
@@ -41,7 +41,7 @@ Notebook ↔ objective: **`01`** = A; **`02`** = YoY baseline + Phillips + forec
 | Bernanke & Mishkin (1997) | *JEP* | Framing. |
 | Roger (2010) | IMF *F&D* | Dates narrative. |
 | Ball & Sheridan (2005) | Volume chapter | Skeptical. |
-| Lin, H-F. & Ye, X. (2009) — *Does Inflation Targeting Really Make a Difference?* | *Journal of Monetary Economics* | Matching / selection-aware positive contrast to Ball–Sheridan. |
+| Lin, H-F. & Ye, X. (2009) — *Does Inflation Targeting Really Make a Difference?* | *Journal of Monetary Economics* | Matching / selection-aware positive contrast to Ball-Sheridan. |
 | Mishkin & Schmidt-Hebbel (2007) | NBER WP | Broad empirical survey. |
 
 ### Money — quantity theory — long vs short tension (Obj A + bridge to Obj B)
@@ -92,7 +92,7 @@ Notebook ↔ objective: **`01`** = A; **`02`** = YoY baseline + Phillips + forec
 
 | Doc | Role |
 |---|---|
-| This file **`reading_list.md`** | **Downloads + bibliography** — arc order in §1. |
+| This file **`reading_list.md`** | **Downloads + bibliography** — reorganized arc order in §1. |
 | **`reading_guide.md`** | Repo read order + pointer here + vault study guide. |
 | Vault **`…/Cross_Country_Monetary_Project/STUDY_GUIDE_2026-04-29.md`** | 7‑day ownership + memorized pitch (personal, outside git). |
 

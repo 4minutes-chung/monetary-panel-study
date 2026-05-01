@@ -1,6 +1,7 @@
 # Executive Memo (Simple Version, 2026-04-19)
 
-## The question
+**Narrative authority:** The single-report spine is **`Lucas → Objective A (AVERAGE) → Objective B (YoY) → Objective C (IT probe)`**, as in `research_target.md` and `report_draft.md`.  
+This memo still labels **Phase 0 / Phase 1 / Phase 2** where it echoes older notebook numbering: Phase 0 ≈ Obj A (`01_*` notebook context); Phase 1 ≈ notebook `02` (YoY FE/IV baseline); Phase 2 ≈ notebook `03` (LP‑IV). Canonical numbers are always in **`04_current_results/`**.
 
 Do countries with faster money growth also get higher inflation or faster GDP growth?
 

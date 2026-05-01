@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import statsmodels.formula.api as smf
+from statsmodels.stats.multitest import multipletests
+from statsmodels.tsa.filters.hp_filter import hpfilter
 from linearmodels.iv import IV2SLS
 from linearmodels.panel import PanelOLS
 
@@ -41,6 +43,7 @@ class Paths:
     base_path: Path
     controls_path: Path
     iv_path: Path
+    it_dates_path: Path
     region_map_path: Path
     m2_raw_path: Path
     out_root: Path
@@ -62,6 +65,7 @@ def build_paths() -> Paths:
         base_path=root / "02_data/analysis_ready/macro_growth_merged.csv",
         controls_path=root / "02_data/supporting/phase1_controls.csv",
         iv_path=root / "02_data/supporting/phase1_instruments.csv",
+        it_dates_path=root / "02_data/supporting/it_adoption_dates.csv",
         region_map_path=root / "02_data/supporting/region_map_worldbank_2026-03-26.csv",
         m2_raw_path=root / "02_data/raw/m2_raw.csv",
         out_root=out_root,
@@ -79,6 +83,7 @@ def ensure_inputs(paths: Paths) -> None:
         paths.base_path,
         paths.controls_path,
         paths.iv_path,
+        paths.it_dates_path,
         paths.region_map_path,
         paths.m2_raw_path,
     ]
@@ -109,6 +114,7 @@ def read_panel(paths: Paths, logs: list[str]) -> pd.DataFrame:
     base = pd.read_csv(paths.base_path)
     controls = pd.read_csv(paths.controls_path)
     instruments = pd.read_csv(paths.iv_path)
+    it_dates = pd.read_csv(paths.it_dates_path)
 
     key_cols = ["Country Name", "year"]
     for name, frame in [("base", base), ("controls", controls), ("instruments", instruments)]:
@@ -119,6 +125,18 @@ def read_panel(paths: Paths, logs: list[str]) -> pd.DataFrame:
     panel = base.merge(controls, on=key_cols, how="left", validate="one_to_one")
     panel = panel.merge(instruments, on=key_cols, how="left", validate="one_to_one")
     panel = panel.sort_values(["Country Name", "year"]).copy()
+    panel = panel.merge(
+        it_dates[["country", "it_adoption_year_roger2010", "it_adoption_year_hammond2012"]].rename(
+            columns={"country": "Country Name"}
+        ),
+        on="Country Name",
+        how="left",
+    )
+    panel["it_group"] = np.where(panel["it_adoption_year_roger2010"].notna(), "adopter", "never_adopter")
+
+    panel = panel.rename(columns={"Country Name": "country"})
+    panel["output_gap_hp"] = build_output_gap(panel)
+    panel = panel.rename(columns={"country": "Country Name"})
 
     log(
         "Loaded panel with "
@@ -126,6 +144,19 @@ def read_panel(paths: Paths, logs: list[str]) -> pd.DataFrame:
         logs,
     )
     return panel
+
+
+def build_output_gap(panel: pd.DataFrame) -> pd.Series:
+    out = pd.Series(np.nan, index=panel.index, dtype=float)
+    for _, idx in panel.groupby("country").groups.items():
+        sub = panel.loc[idx].sort_values("year")
+        growth = sub["gdp_growth"].astype(float)
+        if growth.notna().sum() < 10:
+            continue
+        level = np.log1p(growth.fillna(0.0) / 100.0).cumsum()
+        cycle, _ = hpfilter(level, lamb=6.25)
+        out.loc[sub.index] = 100.0 * cycle
+    return out
 
 
 def exact_horizon_series(
@@ -742,10 +773,11 @@ def build_phase1_audit(panel: pd.DataFrame, paths: Paths, logs: list[str]) -> di
     }
 
 
-def run_lp_iv(panel: pd.DataFrame, outcome: str, horizon: int, instrument: str) -> dict:
+def run_lp_iv(panel: pd.DataFrame, outcome: str, horizon: int, instrument: str, fixed_mask: pd.Series | None = None) -> dict:
     y_col = f"{outcome}_h{horizon}"
     cols = ["Country Name", "year", y_col, "m2_growth", instrument, *RESTRICTED_CONTROLS]
-    fit_data = panel[cols].dropna().copy().rename(columns={"Country Name": "country"})
+    fit_source = panel.loc[fixed_mask].copy() if fixed_mask is not None else panel
+    fit_data = fit_source[cols].dropna().copy().rename(columns={"Country Name": "country"})
 
     formula = f"{y_col} ~ 1 + " + " + ".join(RESTRICTED_CONTROLS) + f" + C(country) + C(year) [m2_growth ~ {instrument}]"
     result = IV2SLS.from_formula(formula, data=fit_data).fit(cov_type="clustered", clusters=fit_data["country"])
@@ -771,8 +803,124 @@ def run_lp_iv(panel: pd.DataFrame, outcome: str, horizon: int, instrument: str) 
     }
 
 
+def build_phillips_block(panel: pd.DataFrame, paths: Paths, logs: list[str]) -> dict:
+    """Phillips-curve YoY block (Obj B): in-sample TWFE + 2016-2020 holdout forecast.
+
+    Spec 1 (baseline):  pi_t = a_i + d_t + rho * pi_{t-1} + beta * gap_t + eps
+    Spec 2 (augmented): pi_t = a_i + d_t + rho * pi_{t-1} + beta * gap_t + gamma * m2g + eps
+    Forecast: country-FE only (year FE dropped so unseen years can be predicted),
+              train years <= TRAIN_END, holdout = remaining years.
+    """
+    TRAIN_END = 2015
+    cols = ["Country Name", "year", "inflation", "output_gap_hp", "m2_growth"]
+    phil = panel[cols].rename(columns={"Country Name": "country"}).sort_values(["country", "year"]).copy()
+    phil["inflation_l1"] = phil.groupby("country")["inflation"].shift(1)
+    phil = phil.dropna(subset=["inflation", "inflation_l1", "output_gap_hp", "m2_growth"])
+
+    if phil.empty:
+        logs.append("Phillips block skipped (empty sample).")
+        return {"phillips_skipped": True}
+
+    phil_panel = phil.set_index(["country", "year"])
+
+    base_res = PanelOLS.from_formula(
+        "inflation ~ 1 + inflation_l1 + output_gap_hp + EntityEffects + TimeEffects",
+        data=phil_panel,
+    ).fit(cov_type="clustered", cluster_entity=True, cluster_time=True)
+    aug_res = PanelOLS.from_formula(
+        "inflation ~ 1 + inflation_l1 + output_gap_hp + m2_growth + EntityEffects + TimeEffects",
+        data=phil_panel,
+    ).fit(cov_type="clustered", cluster_entity=True, cluster_time=True)
+
+    def _coef_row(name: str, res) -> dict:
+        row = {"model": name, "nobs": int(res.nobs), "within_r2": float(res.rsquared_within)}
+        for v in ["inflation_l1", "output_gap_hp", "m2_growth"]:
+            row[f"coef_{v}"] = float(res.params[v]) if v in res.params.index else np.nan
+            row[f"p_{v}"] = float(res.pvalues[v]) if v in res.pvalues.index else np.nan
+        return row
+
+    coef_table = pd.DataFrame([
+        _coef_row("phillips_baseline", base_res),
+        _coef_row("phillips_augmented", aug_res),
+    ])
+    coef_path = paths.out_audit_tables / "phillips_results.csv"
+    coef_table.to_csv(coef_path, index=False)
+
+    train = phil[phil["year"] <= TRAIN_END]
+    test = phil[phil["year"] > TRAIN_END]
+
+    def _fit_country_fe(train_df: pd.DataFrame, x_cols: list[str], y_col: str = "inflation"):
+        grp_means = train_df.groupby("country")[x_cols + [y_col]].transform("mean")
+        Xd = train_df[x_cols].values - grp_means[x_cols].values
+        yd = train_df[y_col].values - grp_means[y_col].values
+        beta, *_ = np.linalg.lstsq(Xd, yd, rcond=None)
+        cmean = train_df.groupby("country")[x_cols + [y_col]].mean()
+        cmean["alpha"] = cmean[y_col] - cmean[x_cols].values @ beta
+        return beta, cmean["alpha"]
+
+    def _predict(test_df: pd.DataFrame, x_cols: list[str], beta, alpha: pd.Series) -> pd.DataFrame:
+        out = test_df.copy()
+        out["alpha_i"] = out["country"].map(alpha)
+        out = out.dropna(subset=["alpha_i"])
+        out["pred"] = out["alpha_i"].values + out[x_cols].values @ beta
+        return out
+
+    forecast_specs = {
+        "naive_ar1":          ["inflation_l1"],
+        "phillips":           ["inflation_l1", "output_gap_hp"],
+        "phillips_augmented": ["inflation_l1", "output_gap_hp", "m2_growth"],
+    }
+    skill_rows: list[dict] = []
+    pred_frames: list[pd.DataFrame] = []
+    for name, xc in forecast_specs.items():
+        beta, alpha = _fit_country_fe(train, xc)
+        pred_df = _predict(test, xc, beta, alpha)
+        err = pred_df["pred"] - pred_df["inflation"]
+        skill_rows.append({
+            "model": name,
+            "rmse": float(np.sqrt((err ** 2).mean())),
+            "mae": float(err.abs().mean()),
+            "bias": float(err.mean()),
+            "n_holdout": int(len(pred_df)),
+            "n_countries_holdout": int(pred_df["country"].nunique()),
+            "train_end_year": TRAIN_END,
+        })
+        pred_frames.append(pred_df[["country", "year", "inflation", "pred"]].assign(model=name))
+
+    skill_table = pd.DataFrame(skill_rows)
+    skill_path = paths.out_audit_tables / "phillips_forecast_skill.csv"
+    skill_table.to_csv(skill_path, index=False)
+
+    pred_panel = pd.concat(pred_frames, ignore_index=True)
+    pred_path = paths.out_audit_tables / "phillips_forecast_predictions.csv"
+    pred_panel.to_csv(pred_path, index=False)
+
+    aug_rmse = float(skill_table.loc[skill_table["model"] == "phillips_augmented", "rmse"].iloc[0])
+    base_rmse = float(skill_table.loc[skill_table["model"] == "naive_ar1", "rmse"].iloc[0])
+    rmse_gain_vs_naive = (base_rmse - aug_rmse) / base_rmse if base_rmse > 0 else float("nan")
+    logs.append(
+        f"Phillips block: in-sample n={int(aug_res.nobs)}; "
+        f"holdout n={int(skill_table['n_holdout'].iloc[0])} ({TRAIN_END + 1}-{int(test['year'].max())}); "
+        f"aug RMSE={aug_rmse:.4f}, naive RMSE={base_rmse:.4f}, gain={rmse_gain_vs_naive:.1%}."
+    )
+
+    return {
+        "phillips_skipped": False,
+        "in_sample_table": coef_table,
+        "forecast_skill": skill_table,
+        "rmse_naive_ar1": base_rmse,
+        "rmse_phillips": float(skill_table.loc[skill_table["model"] == "phillips", "rmse"].iloc[0]),
+        "rmse_phillips_augmented": aug_rmse,
+        "rmse_gain_vs_naive": rmse_gain_vs_naive,
+        "train_end_year": TRAIN_END,
+        "n_holdout": int(skill_table["n_holdout"].iloc[0]),
+    }
+
+
 def build_phase2_lp(panel: pd.DataFrame, paths: Paths, logs: list[str]) -> dict:
     lp_panel = panel.copy()
+    if "it_group" not in lp_panel.columns:
+        lp_panel["it_group"] = "never_adopter"
     horizons = {
         "inflation": [0, 1, 2, 3],
         "gdp_growth": [0],
@@ -789,13 +937,30 @@ def build_phase2_lp(panel: pd.DataFrame, paths: Paths, logs: list[str]) -> dict:
                 out_col=out_col,
             )
 
+    fixed_cols = [
+        "Country Name",
+        "year",
+        "m2_growth",
+        "instrument_m2_external_level",
+        "instrument_m2_l1",
+        *RESTRICTED_CONTROLS,
+        "inflation_h0",
+        "inflation_h1",
+        "inflation_h2",
+        "inflation_h3",
+        "gdp_growth_h0",
+    ]
+    fixed_mask = lp_panel[fixed_cols].notna().all(axis=1)
+
     rows: list[dict] = []
     failures: list[str] = []
     for instrument in ["instrument_m2_external_level", "instrument_m2_l1"]:
         for outcome, horizon_list in horizons.items():
             for horizon in horizon_list:
                 try:
-                    rows.append(run_lp_iv(lp_panel, outcome=outcome, horizon=horizon, instrument=instrument))
+                    rows.append(
+                        run_lp_iv(lp_panel, outcome=outcome, horizon=horizon, instrument=instrument, fixed_mask=fixed_mask)
+                    )
                 except Exception as exc:  # pragma: no cover - defensive
                     failures.append(f"outcome={outcome},h={horizon},instrument={instrument},err={exc}")
 
@@ -806,12 +971,35 @@ def build_phase2_lp(panel: pd.DataFrame, paths: Paths, logs: list[str]) -> dict:
         raise RuntimeError(f"LP-IV row mismatch: expected {expected_rows}, got {len(rows)}")
 
     lp_table = pd.DataFrame(rows).sort_values(["instrument", "outcome", "horizon"])
+    for instrument in ["instrument_m2_external_level", "instrument_m2_l1"]:
+        infl_mask = (lp_table["instrument"] == instrument) & (lp_table["outcome"] == "inflation")
+        if int(infl_mask.sum()) > 0:
+            _, p_holm, _, _ = multipletests(lp_table.loc[infl_mask, "p_value"], alpha=0.05, method="holm")
+            lp_table.loc[infl_mask, "p_value_holm"] = p_holm
+    lp_table["p_value_holm"] = lp_table["p_value_holm"].fillna(lp_table["p_value"])
     lp_table.to_csv(paths.out_lp_tables / "lp_iv_all_results.csv", index=False)
 
     primary = lp_table[lp_table["instrument"] == "instrument_m2_external_level"].copy()
     alt = lp_table[lp_table["instrument"] == "instrument_m2_l1"].copy()
     primary.to_csv(paths.out_lp_tables / "lp_iv_primary_results.csv", index=False)
     alt.to_csv(paths.out_lp_tables / "lp_iv_alt_results.csv", index=False)
+
+    # IT stratified comparison (primary instrument, inflation horizons).
+    strat_rows: list[dict] = []
+    for it_group in ["adopter", "never_adopter"]:
+        subgroup_mask = fixed_mask & (lp_panel["it_group"] == it_group)
+        for horizon in horizons["inflation"]:
+            row = run_lp_iv(
+                lp_panel,
+                outcome="inflation",
+                horizon=horizon,
+                instrument="instrument_m2_external_level",
+                fixed_mask=subgroup_mask,
+            )
+            row["it_group"] = it_group
+            strat_rows.append(row)
+    stratified = pd.DataFrame(strat_rows).sort_values(["it_group", "horizon"])
+    stratified.to_csv(paths.out_lp_tables / "lp_iv_it_stratified.csv", index=False)
 
     powerbi = lp_table.copy()
     powerbi["is_sig_5pct"] = powerbi["p_value"] < 0.05
@@ -854,16 +1042,18 @@ def build_phase2_lp(panel: pd.DataFrame, paths: Paths, logs: list[str]) -> dict:
 
     inflation_sig = int((primary_inflation["p_value"] < 0.05).sum())
     gdp_sig = int((primary_gdp["p_value"] < 0.05).sum())
-    inflation_sig_familywise = int((primary_inflation["p_value"] * max(len(primary_inflation), 1) < 0.05).sum())
+    inflation_sig_familywise = int((primary_inflation["p_value_holm"] < 0.05).sum())
 
     metrics = pd.DataFrame(
         [
             {"metric": "inflation_sig_horizons_primary", "value": inflation_sig},
+            {"metric": "inflation_sig_horizons_primary_holm", "value": inflation_sig_familywise},
             {"metric": "gdp_sig_horizons_primary", "value": gdp_sig},
             {"metric": "gdp_horizon_mode_primary", "value": "static_h0_only"},
             {"metric": "mean_first_stage_stat_primary", "value": float(primary["first_stage_stat"].mean())},
             {"metric": "mean_first_stage_stat_alt_lag", "value": float(alt["first_stage_stat"].mean()) if len(alt) else np.nan},
             {"metric": "min_first_stage_stat_primary", "value": float(primary["first_stage_stat"].min()) if len(primary) else np.nan},
+            {"metric": "fixed_sample_rows", "value": int(fixed_mask.sum())},
         ]
     )
     metrics.to_csv(paths.out_lp_tables / "interpretation_metrics.csv", index=False)
@@ -883,13 +1073,35 @@ def build_phase2_lp(panel: pd.DataFrame, paths: Paths, logs: list[str]) -> dict:
         "lp_table": lp_table,
         "primary": primary,
         "alt": alt,
+        "stratified": stratified,
         "inflation_sig": inflation_sig,
+        "inflation_sig_holm": inflation_sig_familywise,
         "gdp_sig": gdp_sig,
         "lp_inference_decision": lp_inference_decision,
     }
 
 
-def write_summary(paths: Paths, audit: dict, lp: dict, logs: list[str]) -> None:
+def _phillips_summary_lines(phillips: dict) -> list[str]:
+    skill = phillips["forecast_skill"]
+    in_sample = phillips["in_sample_table"]
+    aug = in_sample.loc[in_sample["model"] == "phillips_augmented"].iloc[0]
+    base = in_sample.loc[in_sample["model"] == "phillips_baseline"].iloc[0]
+    train_end = int(phillips["train_end_year"])
+    return [
+        "## Objective B (YoY \u2014 Phillips Curve + Inflation Forecast)",
+        f"- In-sample TWFE Phillips (baseline): inflation_l1 coef=`{base['coef_inflation_l1']:.4f}` (p=`{base['p_inflation_l1']:.4f}`), output_gap_hp coef=`{base['coef_output_gap_hp']:.4f}` (p=`{base['p_output_gap_hp']:.4f}`), within R\u00b2=`{base['within_r2']:.4f}`, n=`{int(base['nobs'])}`.",
+        f"- In-sample TWFE Phillips (augmented +m2_growth): inflation_l1 coef=`{aug['coef_inflation_l1']:.4f}` (p=`{aug['p_inflation_l1']:.4f}`), output_gap_hp coef=`{aug['coef_output_gap_hp']:.4f}` (p=`{aug['p_output_gap_hp']:.4f}`), m2_growth coef=`{aug['coef_m2_growth']:.4f}` (p=`{aug['p_m2_growth']:.4f}`), within R\u00b2=`{aug['within_r2']:.4f}`.",
+        f"- Holdout forecast (train \u2264 {train_end}, test {train_end + 1}\u20132020, country FE only):",
+        *[
+            f"  - `{row['model']}`: RMSE=`{row['rmse']:.4f}`, MAE=`{row['mae']:.4f}`, bias=`{row['bias']:+.4f}`, n=`{int(row['n_holdout'])}` rows / `{int(row['n_countries_holdout'])}` countries.".replace("`-0.0000`", "`0.0000`")
+            for _, row in skill.iterrows()
+        ],
+        f"- RMSE gain (augmented Phillips vs naive AR(1)): `{phillips['rmse_gain_vs_naive']:.1%}`.",
+        "",
+    ]
+
+
+def write_summary(paths: Paths, audit: dict, lp: dict, logs: list[str], phillips: dict | None = None) -> None:
     max_drift = float(audit["gate_table"]["abs_drift_pct"].max())
     strong_iv_status = "PASS" if audit["preferred_first_stage_strong_pass"] else "FAIL"
     interpretation_ready = bool(audit["interpretation_ready"])
@@ -912,13 +1124,11 @@ def write_summary(paths: Paths, audit: dict, lp: dict, logs: list[str]) -> None:
     summary_lines = [
         "# Current Results Summary",
         "",
-        "## Empirical Design Updates",
-        "- Kept exact FE formulas for IV estimation.",
-        "- Kept exact calendar-year horizon matching (no row-shift approximation).",
-        "- Added explicit no-partial-export checks for LP-IV outputs.",
-        "- Added inference sensitivity table comparing one-way vs two-way clustering on key IV spec.",
-        "- Clarified identification validity read: first-stage is reported as clustered Wald chi2(1), not classic F-stat.",
-        "- Reporting language now tracks inference robustness and reproducibility of empirical artifacts.",
+        "## Narrative (Lucas \u2192 AVERAGE \u2192 YoY \u2192 IT regime)",
+        "- Intro (Lucas): the long-run cross-country money-inflation slope is the benchmark object the report tests.",
+        "- Objective A (AVERAGE, descriptive): country-mean money growth is strongly associated with country-mean inflation; GDP links are weaker.",
+        "- Objective B (YoY, exploratory): within-country short-run dynamics are smaller and sensitivity-dependent \u2014 the AVG vs YoY wedge is the report's main finding.",
+        "- Objective C (IT regime, exploratory probe): inflation-targeting adoption is reported as a regime moderator on the YoY slope, caveat-first.",
         "",
         "## Interpretation Status",
         f"- INTERPRETATION_READY: `{interpretation_ready}`",
@@ -927,13 +1137,13 @@ def write_summary(paths: Paths, audit: dict, lp: dict, logs: list[str]) -> None:
         "- **Forbidden when tier != causal**: policy-effect and counterfactual causal-effect claims.",
         "",
         "## Estimand & Assumptions",
-        "- Estimand (associational): panel relationship between `m2_growth` and outcomes under country/time fixed effects.",
-        "- Estimand (IV): local IV estimand for `m2_growth` using specified instruments.",
-        "- Identification assumptions: instrument relevance, exogeneity, and exclusion restriction.",
-        "- Decision rule: failed identification/stability/placebo gates downgrade claims from `causal` to `associational` or `exploratory`.",
+        "- Objective A (AVERAGE) estimand: Lucas-style long-run country-mean associations (between-country slope).",
+        "- Objective B (YoY) estimand: short-run within-country dynamic associations (Phillips + LP-IV), exploratory with fixed-sample lock and Holm correction.",
+        "- Objective C (IT regime) estimand: slope-shift moderator on the YoY money-inflation pass-through (`post_it \u00d7 treated \u00d7 m2_growth`); level event-study reported as appendix companion only.",
+        "- Decision rule: failed identification/stability/placebo gates keep claims non-causal.",
         "",
-        "## Inference Decision",
-        f"- Decision: `{audit['inference_decision']}`",
+        "## Conservative Diagnostics Snapshot",
+        f"- Inference decision flag: `{audit['inference_decision']}`",
         f"- Identification diagnostic stat (country clustering): `{audit['preferred_first_stage_stat_country']:.4f}`",
         f"- Identification diagnostic stat (country+year clustering): `{audit['preferred_first_stage_stat_country_year']:.4f}`",
         f"- Conservative identification diagnostic stat: `{audit['preferred_first_stage_stat']:.4f}`",
@@ -943,10 +1153,13 @@ def write_summary(paths: Paths, audit: dict, lp: dict, logs: list[str]) -> None:
         f"- Stability drift (max inflation drift across gate specs): `{max_drift:.4f}`",
         f"- Placebo tests significant at p<0.05: `{int((audit['placebo_table']['p_value'] < 0.05).sum())}`",
         "",
-        "## Phase 2 LP-IV",
+        *(_phillips_summary_lines(phillips) if phillips and not phillips.get("phillips_skipped", True) else []),
+        "## Objective B (YoY \u2014 Short-Run LP-IV)",
         f"- Inference decision flag: `{lp['lp_inference_decision']}`",
-        "- LP horizon p-values are unadjusted; later horizons are exploratory and not decisive without multiple-testing caution.",
+        "- LP horizon estimates use a fixed sample lock across horizons.",
+        "- LP horizon familywise control uses Holm correction for inflation horizons.",
         f"- Primary IV inflation significant horizons (5%, unadjusted): `{lp['inflation_sig']}`",
+        f"- Primary IV inflation significant horizons (5%, Holm): `{lp.get('inflation_sig_holm', lp['inflation_sig'])}`",
         f"- Primary IV GDP significant horizons (5%): `{lp['gdp_sig']}` (static h=0 only)",
         "",
         "## Interpretation Scope",
@@ -966,8 +1179,9 @@ def main() -> None:
 
     panel = read_panel(paths, logs)
     audit = build_phase1_audit(panel, paths, logs)
+    phillips = build_phillips_block(panel, paths, logs)
     lp = build_phase2_lp(panel, paths, logs)
-    write_summary(paths, audit, lp, logs)
+    write_summary(paths, audit, lp, logs, phillips=phillips)
 
     print("Rebuild completed.")
     print("Audit outputs:", paths.out_audit)
