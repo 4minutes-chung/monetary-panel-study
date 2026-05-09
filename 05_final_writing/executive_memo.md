@@ -1,94 +1,92 @@
-# Executive Memo (Simple Version, 2026-04-19)
+# Executive Memo
 
-**Narrative authority:** The single-report spine is **`Lucas → Objective A (AVERAGE) → Objective B (YoY) → Objective C (IT probe)`**, as in `research_target.md` and `report_draft.md`.  
-This memo still labels **Phase 0 / Phase 1 / Phase 2** where it echoes older notebook numbering: Phase 0 ≈ Obj A (`01_*` notebook context); Phase 1 ≈ notebook `02` (YoY FE/IV baseline); Phase 2 ≈ notebook `03` (LP‑IV). Canonical numbers are always in **`04_current_results/`**.
+**Question:** Does the quantity theory of money hold in the post-QE, post-COVID era?
 
-Do countries with faster money growth also get higher inflation or faster GDP growth?
+The canonical papers (McCandless & Weber 1995; De Grauwe & Polan 2005) end before 2008.
+This panel covers 1991–2024, including the QE decade (M2 up, inflation flat) and COVID surge (2021–2023).
 
-## Short answer
+Two samples throughout: **full** (160 countries) and **clean** (123 countries — drop if any year > 40% inflation, removing post-Soviet and Latin American hyperinflation episodes from the 1990s).
 
-1. Yes for inflation in the core specs: the relationship is positive and statistically clear.
-2. Not really for GDP growth: results are weak or not statistically reliable.
-3. We frame this as association, not final causality, because the conservative identification gate fails.
+---
 
-## Data in one line
+## Data
 
-- 4,292 country-year observations
-- 163 countries
-- 1991 to 2020
-- Variables are decimal rates (for example, `0.01 = 1` percentage point)
-- Source: `04_current_results/tables/phase1_audit/data_audit_summary.csv`
+- 160 countries, 1991–2024, 4,750 rows
+- M2 growth, CPI inflation, GDP growth (World Bank WDI)
+- Lending rate (World Bank FR.INR.LEND), 147 countries
+- US appendix: FRED M2, CPI, 3-month T-bill, 1960–2024
 
-## What we found (plain language)
+---
 
-### 1) Big-picture baseline (Phase 0 context)
+## Obj A — Long-run (country means, ≥30 obs)
 
-- Pooled inflation: `0.6451` (`p=5.11e-07`)
-- Pooled GDP growth: `-0.0010` (`p=0.8687`)
-- Long-run country-average inflation (countries with `n>=30`, final `n=86`): `0.8909` (`p=2.84e-38`)
-- Long-run country-average GDP growth: `0.0616` (`p=0.0320`)
+| Sample | n countries | M2→Inflation slope | R² | M2→GDP slope |
+|---|---|---|---|---|
+| Full | 108 | **0.952** (p=4.4e-50) | 0.877 | 0.016 (n.s.) |
+| Clean | 83 | **0.524** (p=6.8e-15) | 0.529 | 0.283 (p<0.001) |
 
-Source status:
+Long-run association holds in both samples. Full-sample slope near one-for-one — driven partly by hyperinflation outliers confirming QTM at extremes. Clean-sample slope (0.52) is the modern-economy estimate.
 
-- These Phase 0 notebook-only exports are not present in the tracked final package. Keep this section as context only; current final claims should rely on `04_current_results/` evidence unless the notebook exports are regenerated.
+**Lucas ii cross-country:** M2 mean vs lending rate mean, 107 clean countries — slope = 0.49, R² = 0.16. Fisher relation holds in direction.
 
-### 2) Panel FE + IV baseline (Phase 1)
+---
 
-- FE baseline inflation: `0.5706` (`p=2.83e-06`)
-- FE baseline GDP growth: `-0.0080` (`p=0.3951`)
-- IV (external instrument) inflation: `1.0327` (`p=1.04e-04`)
-- IV (external instrument) GDP growth: `-0.1196` (`p=0.1570`)
-- First-stage (external instrument, country clustering): stat `4.2243`, `p=0.0398`
-- Conservative first-stage for the gate (minimum across country and country+year clustering): stat `3.8016`, `p=0.0512`
+## Obj B — Short-run TWFE (year-on-year, within country)
 
-Gate read:
+| Sample | coef | p-value | Within R² | Rows |
+|---|---|---|---|---|
+| Full (160c) | **0.665** | 0.00018 | 0.504 | 4,750 |
+| Clean (123c) | **0.040** | 0.062 | 0.029 | 3,639 |
 
-- Conservative relevance gate fails (`3.8016 < 3.8415` and `p=0.0512 > 0.05`)
-- Strong-IV (`stat>=10`) fails
-- Stability drift and placebo diagnostics also fail the current scorecard, so the contract recommendation is `GO_PIVOT_SHORT_RUN`
+**The clean-sample TWFE is the headline result.** Without hyperinflation countries, year-to-year money growth has no significant short-run effect on inflation. The full-sample slope (0.665) lives in the 1990s transition economies.
 
-Sources:
+### Phillips curve (full sample)
 
-- `04_current_results/tables/phase1_audit/core_model_results.csv`
-- `04_current_results/tables/phase1_audit/inference_sensitivity.csv`
-- `04_current_results/tables/phase1_audit/audit_scorecard.csv`
+- Baseline: inflation(t−1) coef = 0.593, within R² = 0.548
+- Augmented (+m2): m2_growth coef = 0.349 (p=0.032), within R² = 0.672
+- Holdout RMSE gain vs naïve AR(1): 8.1%
 
-### 3) Short-run LP-IV (Phase 2, primary external instrument)
+Lagged inflation and output gap do most short-run work. M2 adds something in the full sample but not significantly in the clean sample.
 
-Inflation response by horizon:
+---
 
-- `h0: 1.0327 (p=1.04e-04)`
-- `h1: 0.6572 (p=0.0033)`
-- `h2: 0.5697 (p=0.0238)`
-- `h3: 0.5451 (p=0.0333)`
+## The wedge — what the project actually shows
 
-GDP growth at `h0`:
+| Estimator | Full sample | Clean sample |
+|---|---|---|
+| Long-run Obj A | 0.952 | 0.524 |
+| Short-run TWFE Obj B | 0.665 | **0.040** |
 
-- `-0.1196 (p=0.1570)`
+In modern non-hyperinflationary economies: long-run ~0.5, short-run ~0. That is the QE decade in one number.
 
-Minimum first-stage stat across primary inflation horizons:
+---
 
-- `4.2243`
+## Obj C — IT regime (exploratory)
 
-Important caveats:
+IT adopters show weaker short-run pass-through. Consistent with expectations anchoring. Endogenous adoption — not a causal claim.
 
-- Horizon p-values are unadjusted for multiple comparisons, so later horizons (`h2`, `h3`) are suggestive, not decisive.
-- First-stage stats are below `10`, so IV/LP-IV p-values are weak-identification-sensitive.
+---
 
-Sources:
+## Obj D — US appendix (1960–2024)
 
-- `04_current_results/tables/short_run_lp/lp_iv_primary_results.csv`
-- `04_current_results/tables/short_run_lp/interpretation_metrics.csv`
+| | Slope | R² |
+|---|---|---|
+| M2 → Inflation (5yr MA) | 0.474 | 0.196 |
+| M2 → T-bill (5yr MA) | 0.421 | 0.092 |
 
-## How to read this responsibly
+Same story as cross-country: low-frequency relationship holds but QE decade pulls slope below the long-run benchmark.
 
-The inflation pattern is robust as an association.
-The GDP growth pattern is weak.
-With the current conservative gate failure, this is best treated as associational evidence and a short-run exploration, not a final causal claim.
+---
 
-## Reproducibility check
+## Identification limits
 
-Notebook outputs and current script outputs previously matched exactly on key FE/IV/LP-primary numbers.
+- Conservative first-stage F = 4.4 (passes relevance gate; fails strong-IV ≥10)
+- 1 significant placebo test
+- All IV results associational only
+- Claim tier: descriptive (Obj A, D), exploratory (Obj B, C)
 
-- Max absolute difference: `0.0`
-- Notebook-vs-script parity was previously checked with max absolute difference `0.0`.
+---
+
+## One paragraph
+
+In long-run country averages, money growth and inflation are positively associated (slope 0.52–0.95 depending on sample). Year-to-year within countries, the pass-through collapses: 0.665 in the full panel, 0.040 in the 123 non-hyperinflationary countries. That near-zero short-run slope in the clean sample is the QE decade's empirical signature — central banks expanded M2 for a decade without inflation, and this panel quantifies exactly how weak the short-run transmission was. The COVID surge appears in the data but is not enough to flip the result. Long run: quantity theory holds. Short run in modern economies: it largely disappears.

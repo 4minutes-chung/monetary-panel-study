@@ -4,6 +4,8 @@ This folder contains the readable economics analysis notebooks.
 
 ## Notebook order
 
+0. `00_data_refresh_and_rebuild.ipynb`
+   - Notebook-first setup: refresh World Bank M2/CPI/GDP, rebuild `macro_growth_merged.csv`, then rerun canonical rebuild to sync `04_current_results/`.
 1. `01_lucas_replication.ipynb`
    - Obj A motivation.
    - Lucas-style long-run replication and descriptive cross-country pattern.
@@ -14,7 +16,7 @@ This folder contains the readable economics analysis notebooks.
 4. `04_did_it_event_study.ipynb`
    - Obj **C** exploratory: IT event-study and slope-shift probe (caveat-first).
 
-**Naming note:** Notebooks title cells may still say "Phase 0/1/2" for historical numbering. Map: Phase 0 = Obj A notebook `01`; Phase 1 = notebook `02` (YoY baseline inside Obj B); Phase 2 = notebook `03` (LP‑IV remains Obj B); notebook `04` = Obj C.
+Old “Phase 0/1/2” labels in cells = `01` / `02` / `03`; `04` = Obj C.
 
 ## Outputs
 
@@ -23,7 +25,9 @@ This folder contains the readable economics analysis notebooks.
 
 ## Reproducibility note
 
-For parity checks and publication-style exports, run:
+For parity checks and publication-style exports, either:
 
-- `python3 90_reproduction_scripts/run_rebuild.py`
-- `python3 90_reproduction_scripts/build_graphs.py`
+- run `00_data_refresh_and_rebuild.ipynb` (notebook-first path), or
+- run scripts directly:
+  - `python3 90_reproduction_scripts/run_rebuild.py`
+  - `python3 90_reproduction_scripts/build_graphs.py`

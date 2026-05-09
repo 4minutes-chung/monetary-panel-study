@@ -3,7 +3,7 @@ inflation_sig_horizons_primary,4
 inflation_sig_horizons_primary_holm,4
 gdp_sig_horizons_primary,0
 gdp_horizon_mode_primary,static_h0_only
-mean_first_stage_stat_primary,5.222929267558712
-mean_first_stage_stat_alt_lag,2.992354064785796
-min_first_stage_stat_primary,5.222929267558712
-fixed_sample_rows,2972
+mean_first_stage_stat_primary,6.649580625348486
+mean_first_stage_stat_alt_lag,2.6113229365586714
+min_first_stage_stat_primary,6.649580625348485
+fixed_sample_rows,3293

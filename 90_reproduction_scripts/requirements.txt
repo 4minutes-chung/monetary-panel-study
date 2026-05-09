@@ -1,8 +1,0 @@
-# Pinned for reproducible pipeline outputs across machines/reruns.
-numpy==1.26.4
-pandas==2.3.3
-matplotlib==3.10.8
-seaborn==0.13.2
-statsmodels==0.14.6
-linearmodels==7.0
-pytest==9.0.3

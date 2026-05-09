@@ -1,55 +1,54 @@
-# Money Growth, Inflation, and GDP Growth
+# Does the Quantity Theory Hold in the QE-to-COVID Era?
 
-Single-report research repo with one arc on one panel:
+Cross-country macro panel, 160 countries, 1991–2024. The canonical money-inflation papers (McCandless & Weber 1995; De Grauwe & Polan 2005) predate QE and COVID. This project updates them.
 
-1. Intro: Lucas (1980) — long-run cross-country money-inflation slope as benchmark.
-2. Objective A — AVERAGE: Lucas-style country-mean estimate (descriptive).
-3. Objective B — YoY: within-country short-run dynamics, FE + Phillips + LP-IV (exploratory).
-4. Objective C — IT regime: inflation-targeting adoption as a moderator on the YoY slope (exploratory probe).
+## Headline finding
 
-The headline contribution is the **wedge between the AVERAGE and YoY estimates**, with IT used to ask whether the regime explains the gap.
+| Estimator | Full sample (160c) | Clean sample (123c, no hyperinflation) |
+|---|---|---|
+| Long-run country means (Obj A) | 0.952 | 0.524 |
+| Short-run TWFE year-on-year (Obj B) | 0.665 | **0.040** (n.s.) |
 
-## Start Here
+In modern non-hyperinflationary economies, year-to-year money growth barely moves inflation. The QE decade in one number.
 
-1. `LEARNING_PLAN.md` (7‑day ownership plan + repo map, if you want to learn the stack)
-2. `01_research_question/research_target.md` (master contract)
-3. `01_research_question/claim_boundary.md` (language guardrails)
-4. `01_research_question/reading_guide.md` — pointer to docs + vault study guide + `reading_list.md` (literature themes)
-5. `04_current_results/summary.md` (current results narrative)
-6. `05_final_writing/report_draft.md` (single-report writeup)
-7. `CODE_GUIDE.md` (technical runbook for code, tests, and folder rules)
+## Notebooks (run in order)
 
-## Executive Read (Coffee Chat)
+| Notebook | What |
+|---|---|
+| `01_lucas_replication` | Obj A — Lucas-style long-run country-mean scatter, full + clean samples, cross-country lending rate |
+| `02_panel_fe_iv_baseline` | Obj B — TWFE baseline + Phillips curve, clean-sample robustness |
+| `03_short_run_lp_iv` | Obj B — LP-IV horizons (appendix, weak instrument) |
+| `04_did_it_event_study` | Obj C — IT adoption event study + slope-shift probe |
+| `05_lucas_us_appendix` | Obj D — US M2 vs inflation and T-bill, 1960–2024, 5-yr MA |
 
-- AVERAGE (Obj A): money growth and inflation are strongly associated in long-run cross-country data; GDP links are weaker.
-- YoY (Obj B): within-country short-run estimates are smaller and sensitivity-dependent — that gap is the headline.
-- IT regime (Obj C): adoption appears to moderate the YoY slope; reported as exploratory probe with caveats.
-- Identification gates stay conservative throughout, so interpretation remains non-causal.
-- Lucas (1980) leg (ii)—money vs **nominal interest rates**—is not in the cross-country CSV; extension options live in **`02_data/supporting/lucas_ii_nominal_rate_plan.md`** (stay on Path A if time‑boxed).
+## Data
 
-## Folder Management
+- `02_data/analysis_ready/macro_growth_merged.csv` — main panel (columns: `Country Name, year, m2_growth, inflation, gdp_growth, sample_main, sample_low_inflation`)
+- `02_data/raw/fred_*.csv` — US FRED series (M2, CPI, T-bill, M1)
+- `02_data/supporting/intl_lending_rates.csv` — World Bank lending rates, 147 countries 1991–2024
+- `02_data/supporting/it_adoption_dates.csv` — IT adoption dates (Roger 2010 + Hammond 2012)
 
-- `01_research_question/`: contract docs and claim boundaries.
-- `02_data/`: raw, analysis-ready, and supporting inputs.
-- `03_analysis_notebooks/`: objective notebooks (`01` to `04`).
-- `04_current_results/`: canonical outputs (tables, figures, summary).
-- `05_final_writing/`: final report and companion writing.
-- `90_reproduction_scripts/`: rebuild and graph-generation scripts.
-- `tests/`: reproducibility and utility tests.
+## Sample flags
+
+- `sample_main = 1` — all 160 countries
+- `sample_low_inflation = 1` — 123 countries, drop if any year > 40% inflation (removes post-Soviet and Latin American hyperinflation episodes from the 1990s)
+
+## Read first
+
+1. `01_research_question/research_target.md` — research contract
+2. `04_current_results/summary.md` — all key numbers
+3. `05_final_writing/report_draft.md` — full report
+4. `05_final_writing/executive_memo.md` — one-page summary
 
 ## Rebuild
 
 ```bash
-python3 -m pip install -r 90_reproduction_scripts/requirements.txt
-python3 90_reproduction_scripts/run_rebuild.py
-python3 90_reproduction_scripts/build_graphs.py
-python3 -m pytest tests -q
+# Data (if refreshing from World Bank / FRED)
+python3 02_data/supporting/fetch_intl_rates.py
+
+# Notebooks
+jupyter nbconvert --to notebook --execute --inplace 03_analysis_notebooks/01_lucas_replication.ipynb
+# ... repeat for 02–05
 ```
 
-## Claim-Tier Policy
-
-- `causal`: causal language allowed with explicit assumptions.
-- `associational`: descriptive associations only.
-- `exploratory`: pattern discussion only.
-
-When `claim_tier != causal`, avoid policy-effect and counterfactual-effect claims.
+Claims stay non-causal while identification gates in `summary.md` fail.

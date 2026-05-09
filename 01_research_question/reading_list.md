@@ -1,99 +1,78 @@
-# Reading list — reorganized by report arc
+# Reading list
 
-**Contract map:** Lucas (intro) → **Obj A — AVERAGE** → **Obj B — YoY** (FE / Phillips / forecast / LP-IV) → **Obj C — IT regime probe** (`research_target.md`).
+**Arc:** Lucas intro → **Obj A** (AVERAGE) → **Obj B** (YoY: Phillips, forecast, LP-IV) → **Obj C** (IT probe) → **Obj D** (US-only Lucas ii appendix: money vs nominal rate). Notebooks: **`01`** · **`02`** · **`03`** · **`04`** · **`05`**.  
+Authority if anything clashes: **`research_target.md`**.
 
-Read **top to bottom in §1** unless you skip whole objectives. **§2** is reference-by-topic when you Ctrl+F (“Phillips”, “DiD”, “weak IV”). **§3** is optional polish.
-
-Notebook ↔ objective: **`01`** = A; **`02`** = YoY baseline + Phillips + forecast; **`03`** = YoY LP-IV; **`04`** = IT probe.
-
----
-
-## 1. Suggested reading order (main path)
-
-| # | Repo hook | Paper (short citation) | Where / type | Why here |
-|---|-----------|------------------------|--------------|----------|
-| 1 | Intro / framing | Lucas, R.E. (1980) — *Two Illustrations of the Quantity Theory of Money* | *American Economic Review* | Obj A verbal benchmark: **(i)** money–inflation long run; **(ii)** in the paper, money–**nominal interest** (US T-bill); we only echo **(i)** in cross-country means — see `research_target` / notebook `01` for rate gap. |
-| 2 | Obj A figures | McCandless, G.T. Jr. & Weber, W.E. (1995) — *Some Monetary Facts* | *Minneapolis Fed Quarterly Review* | Classic long-run scatter / correlations your country-means visuals echo. |
-| 3 | Obj A wedge | **De Grauwe, P. & Polan, M. (2005)** — *Is Inflation Always and Everywhere a Monetary Phenomenon?* | *Scandinavian Journal of Economics* | Splits low- vs high-inflation panels — links AVERAGE strength to inflation level / regime heterogeneity. |
-| 4 | Obj A persistence + Obj B wedge | **Sargent, T.J. & Surico, P. (2011)** — *Two Illustrations of the Quantity Theory of Money* | *American Economic Review* | Money–inflation link weakens when inflation is anchored — bridges long-run AVG to short-run skepticism about pass-through. |
-| 5 | Obj B YoY Phillips | **Galí, J. & Gertler, M. (1999)** — *Inflation dynamics: A structural econometric analysis* | *Journal of Monetary Economics* | Lag inflation + slack / forward-looking block — aligns with Phillips spec in **`02`** (persistence + output gap frame). |
-| 6 | Obj B forecast sanity | **Atkeson, A. & Ohanian, L.E. (2001)** — *Are Phillips curves useful for forecasting inflation?* | *Federal Reserve Bank of Minneapolis Quarterly Review* | Why naive / simple beats fancy for inflation — legitimizes forecast comparison + RMSE table in **`02`** / `phillips_forecast_skill.csv`. |
-| 7 | Obj B forecasting context | **Stock, J.H. & Watson, M.W. (2007)** — *Why has U.S. inflation become harder to forecast?* | *Journal of Money, Credit and Banking* (supplement) | Sticky persistence / breaks — reading alongside #6 clarifies YoY forecasting claims. |
-| 8 | Obj B dynamics (LP) | **Jordà, Ò. (2005)** — *Estimation and inference of impulse responses by local projections* | *Journal of the American Statistical Association* | Math behind horizon regressions — maps to **`03_short_run_lp_iv.ipynb`** only (**not** the IT event-study). |
-| 9 | Obj C background | Bernanke, B.S. & Mishkin, F.S. (1997) — *Inflation Targeting: A New Framework for Monetary Policy?* | *Journal of Economic Perspectives* | What IT is supposed to accomplish before reading evidence on whether it matters. |
-| 10 | Obj C dates + survey | Roger, S. (2010) — *Inflation Targeting Turns 20* | *Finance & Development* (IMF) | Adoption dates intuition; aligns with **`it_adoption_dates.csv`**. Free PDF typical. |
-| 11 | Obj C evidence landscape | Mishkin, F.S. & Schmidt-Hebbel, K. (2007) — *Does Inflation Targeting Make a Difference?* | NBER Working Paper 12876 | Comprehensive cross-country take on outcomes — contrasts with exploratory Obj C probes in **`04`**. |
-| 12 | Obj C skeptic | Ball, L. & Sheridan, N. (2005) — *Does Inflation Targeting Matter?* | Chapter in *The Inflation-Targeting Debate* (Bernanke & Woodford eds.) | Null / pessimistic counterpart to #11; good for caveat-first language. |
-| 13 | Honest inference (all objectives) | **Nakamura, E. & Steinsson, J. (2018)** — *Identification in Macroeconomics* | *Journal of Economic Perspectives* | One paper that explains why this repo does **not** read as causal macro PhD despite strong associations. Read before overstating YoY IV. |
-| 14 | IV / diagnostics language | Stock, J.H. & Yogo, M. (2005) — *Testing for Weak Instruments in Linear IV Regression* | In *Identification and Inference for Econometric Models* | Why F-stat rules of thumb appear in **`04_current_results`** gate tables. |
-| 15 | Obj C methods (only if you care about staggered DiD) | Callaway, B. & Sant'Anna, P.H.C. (2021) — *Difference-in-differences with multiple time periods* | *Journal of Econometrics* | Modern staggered adoption — use to interpret why **`04`** is “probe” not “identified ATT.” |
-
-**If you only have a weekend:** read **#1–4** (long run + wedge), **#5–7** (Phillips + forecast story), **#13** (don’t overclaim). Add **#8** if you use LP-IV in conversation; add **#9–12, 15** if you pitch IT Obj C.
+Read **1 → 20** in order, or jump by topic using the index at the bottom.
 
 ---
 
-## 2. Theme index (same papers, grouped for lookup)
+## All readings (single order)
 
-### Inflation targeting (Obj C)
+1. **Lucas, R.E. (1980)** — *Two Illustrations of the Quantity Theory of Money* — *American Economic Review* — Long-run money–inflation (i); (ii) is money vs **nominal interest rate** (US T-bill, low-frequency MA filter). Obj A does (i)-style country means; **Obj D** (`05_lucas_us_appendix.ipynb`) now implements (ii) for the US using FRED data — the gap previously noted in `lucas_ii_nominal_rate_plan.md` is being filled.
 
-| Paper | Where | Note |
-|---|---|---|
-| Bernanke & Mishkin (1997) | *JEP* | Framing. |
-| Roger (2010) | IMF *F&D* | Dates narrative. |
-| Ball & Sheridan (2005) | Volume chapter | Skeptical. |
-| Lin, H-F. & Ye, X. (2009) — *Does Inflation Targeting Really Make a Difference?* | *Journal of Monetary Economics* | Matching / selection-aware positive contrast to Ball–Sheridan. |
-| Mishkin & Schmidt-Hebbel (2007) | NBER WP | Broad empirical survey. |
+2. **McCandless, G.T. Jr. & Weber, W.E. (1995)** — *Some Monetary Facts* — *Minneapolis Fed Quarterly Review* — Cross-country long-run money / inflation facts; matches spirit of Obj A plots.
 
-### Money — quantity theory — long vs short tension (Obj A + bridge to Obj B)
+3. **De Grauwe, P. & Polan, M. (2005)** — *Is Inflation Always and Everywhere a Monetary Phenomenon?* — *Scandinavian Journal of Economics* — Strong correlation in high-inflation countries, weaker in low; links to IT / anchored-inflation stories.
 
-| Paper | Where | Note |
-|---|---|---|
-| Lucas (1980) | *AER* | Baseline rhetoric. |
-| McCandless & Weber (1995) | Minneapolis Fed QR | Scatter “monetary facts.” |
-| De Grauwe & Polan (2005) | *Scand. J. Econ.* | Heterogeneity by inflation regime. |
-| Sargent & Surico (2011) | *AER* | Low inflation + anchored expectations ⇒ weaker raw correlation narrative. |
+4. **Sargent, T.J. & Surico, P. (2011)** — *Two Illustrations of the Quantity Theory of Money* — *American Economic Review* — Money–inflation link weakens when inflation is low and expectations anchored; bridges Obj A long averages to skeptical YoY pass-through.
 
-### Short-run YoY inflation (Obj B — Phillips / forecast — not Obj C DiD)
+5. **Galí, J. & Gertler, M. (1999)** — *Inflation dynamics: A structural econometric analysis* — *Journal of Monetary Economics* — Phillips / NK inflation block; aligns with lag inflation + gap in **`02`**.
 
-| Paper | Where | Note |
-|---|---|---|
-| Galí & Gertler (1999) | *JME* | Phillips / NK inflation block. |
-| Atkeson & Ohanian (2001) | Minneapolis Fed QR | Forecast “flat Phillips” benchmark. |
-| Stock & Watson (2007) | *JMCB* | Time-varying / hard to forecast. |
+6. **Atkeson, A. & Ohanian, L.E. (2001)** — *Are Phillips curves useful for forecasting inflation?* — *Federal Reserve Bank of Minneapolis Quarterly Review* — Simple beats fancy for inflation forecasts; backs the RMSE comparison in **`02`** / `phillips_forecast_skill.csv`.
 
-### Dynamic estimation — methods
+7. **Stock, J.H. & Watson, M.W. (2007)** — *Why has U.S. inflation become harder to forecast?* — *Journal of Money, Credit and Banking* (supplement) — Persistence, instability; read with Atkeson–Ohanian.
 
-| Paper | Where | Maps to |
-|---|---|---|
-| Jordà (2005) | *JASA* | **`03`** LP-IV horizons. |
-| Callaway & Sant'Anna (2021) | *J. Econometrics* | Staggered DiD — Obj C if you go deep. |
-| Sun, L. & Abraham, S. (2021) — *Estimating dynamic treatment effects in event studies with heterogeneous treatment effects* | *J. Econometrics* | Alt staggered / event-study correction. |
-| Borusyak, K., Jaravel, X. & Spiess, J. (2024) — *Revisiting event-study designs: Robust and efficient estimation* | *Review of Economic Studies* | Imputation-style event study; optional. |
+8. **Jordà, Ò. (2005)** — *Estimation and inference of impulse responses by local projections* — *Journal of the American Statistical Association* — LP math; maps to **`03`** horizons, **not** the IT event-study in **`04`**.
 
-### Identification & weak instruments
+9. **Bernanke, B.S. & Mishkin, F.S. (1997)** — *Inflation Targeting: A New Framework for Monetary Policy?* — *Journal of Economic Perspectives* — What IT is meant to do.
 
-| Paper | Where | Note |
-|---|---|---|
-| Nakamura & Steinsson (2018) | *JEP* | Macro ID reality check. |
-| Stock & Yogo (2005) | Book chapter | Weak IV / F rules. |
+10. **Roger, S. (2010)** — *Inflation Targeting Turns 20* — *Finance & Development* (IMF) — Survey + adoption dates narrative; lines up with **`it_adoption_dates.csv`**.
+
+11. **Mishkin, F.S. & Schmidt-Hebbel, K. (2007)** — *Does Inflation Targeting Make a Difference?* — NBER Working Paper 12876 — Broad cross-country IT evidence.
+
+12. **Ball, L. & Sheridan, N. (2005)** — *Does Inflation Targeting Matter?* — In *The Inflation-Targeting Debate* (Bernanke & Woodford, eds.) — Skeptical: IT vs non-IT not so different.
+
+13. **Lin, H-F. & Ye, X. (2009)** — *Does Inflation Targeting Really Make a Difference?* — *Journal of Monetary Economics* — Matching / selection; more positive on IT than Ball–Sheridan; read as counterweight to **12**.
+
+14. **Callaway, B. & Sant'Anna, P.H.C. (2021)** — *Difference-in-differences with multiple time periods* — *Journal of Econometrics* — Staggered DiD; why naive TWFE on IT can mislead.
+
+15. **Sun, L. & Abraham, S. (2021)** — *Estimating dynamic treatment effects in event studies with heterogeneous treatment effects* — *Journal of Econometrics* — Event-study / heterogeneity; pair with **14**.
+
+16. **Borusyak, K., Jaravel, X. & Spiess, J. (2024)** — *Revisiting event-study designs: Robust and efficient estimation* — *Review of Economic Studies* — Imputation-style event study; optional robustness read for Obj C.
+
+17. **Nakamura, E. & Steinsson, J. (2018)** — *Identification in Macroeconomics* — *Journal of Economic Perspectives* — Why strong associations ≠ causal macro thesis; read before overselling IV.
+
+18. **Stock, J.H. & Yogo, M. (2005)** — *Testing for Weak Instruments in Linear IV Regression* — In *Identification and Inference for Econometric Models* — F-stat / weak-IV language behind gate tables in **`04_current_results`**.
+
+19. **Abadie, A. (2021)** — *Using synthetic controls: Feasibility, data requirements, and methodological aspects* — *Journal of Economic Literature* — If IT DiD feels too coarse, single-country synthetic control as alternative design.
+
+20. **Ramey, V. (2016)** — *Macroeconomic shocks and their propagation* — *Handbook of Macroeconomics*, Ch. 2 — LP-IV and shocks in survey form; complements **`03`**.
 
 ---
 
-## 3. Optional depth (only if the project stays open another month)
+## Weekend shortcut (still the full list above — just a priority cue)
 
-| Paper | Why open it |
-|---|---|
-| Abadie, A. (2021) — *Using synthetic controls* — *Journal of Economic Literature* | Single-country “what if” stories if DiD on IT feels too coarse. |
-| Ramey, V. (2016) — *Macroeconomic shocks and their propagation* — *Handbook of Macroeconomics* Ch. 2 | LP-IV and shock design in surveyed form; complements **`03`**. |
+If time is tight, read **1–4** then **5–7** then **17** first; add **8** before talking LP-IV; add **9–16** before pitching IT Obj C; **19–20** when the project stays open.
 
 ---
 
-## Where this file lives vs other docs
+## Topic → item numbers
 
-| Doc | Role |
-|---|---|
-| This file **`reading_list.md`** | **Downloads + bibliography** — arc order in §1. |
-| **`reading_guide.md`** | Repo read order + pointer here + vault study guide. |
-| Vault **`…/Cross_Country_Monetary_Project/STUDY_GUIDE_2026-04-29.md`** | 7‑day ownership + memorized pitch (personal, outside git). |
+| Topic | # |
+|------|---|
+| Quantity theory / Obj A | 1–4 |
+| Phillips / forecast / Obj B | 5–7 |
+| LP (notebook **`03`**) | 8 |
+| IT / Obj C (substance) | 9–13 |
+| Staggered DiD / event study | 14–16 |
+| Identification / weak IV | 17–18 |
+| Optional design depth | 19–20 |
+| US Lucas ii / Obj D (notebook **`05`**) | 1 |
 
-If anything here conflicts with `research_target.md` on objectives, **`research_target.md` wins.**
+---
+
+## Other docs
+
+- **`START.md`** (repo root) — 7-day schedule + 12 questions (references item **#s** here).  
+- **`reading_guide.md`** — short read order.

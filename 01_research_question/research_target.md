@@ -13,29 +13,32 @@ If any other document conflicts with this file, this file wins.
 
 ## 1. Research Question
 
-Across countries, how does money growth relate to inflation and GDP growth?
+Does the quantity theory of money — the long-run one-for-one mapping between money growth and inflation — hold in the post-QE, post-COVID era?
+
+The canonical cross-country evidence (McCandless & Weber 1995; De Grauwe & Polan 2005) predates the 2008 financial crisis, quantitative easing, and the 2021–2023 inflation surge. This project updates that evidence with 160 countries through 2023 — a sample that contains both the "money without inflation" QE decade and the sharpest inflation episode in 40 years.
 
 The report follows a single arc on one panel:
 
-1. Lucas (1980) intro — what the long-run cross-country fact is supposed to look like.
-2. Empirical step-by-step on money:
-   - Objective A: AVERAGE — country-mean (long-run) estimate.
-   - Objective B: YoY — within-country (short-run) dynamic estimate.
-3. Policy regime layer:
-   - Objective C: inflation-targeting (IT) adoption as a regime moderator on the YoY slope.
+1. Lucas (1980) intro — the long-run cross-country benchmark; what a one-for-one money-inflation relationship is supposed to look like.
+2. Empirical decomposition on that benchmark:
+   - Objective A: AVERAGE — country-mean (long-run) estimate. Does the long-run fact survive 1991–2023?
+   - Objective B: YoY — within-country (short-run) dynamic estimate. How much of money growth actually becomes inflation year-to-year?
+3. Regime layer:
+   - Objective C: inflation-targeting adoption as a moderator on the YoY slope. Does IT explain why short-run pass-through weakened?
+4. US reference:
+   - Objective D: Lucas's second illustration (money growth vs nominal interest rate) for the United States — the Fisher chain that cross-country data cannot test.
 
-The contribution is the wedge between the AVERAGE estimate (Obj A) and the YoY estimate (Obj B), with IT used to ask whether the regime moderates that gap.
+The central finding is the **wedge between Obj A and Obj B**: the long-run association is strong and robust; the short-run pass-through is smaller, regime-dependent, and weaker in the post-GFC sample. IT is one candidate explanation. The COVID surge is the out-of-sample test.
+
+**Why the sample period matters:** M2 expanded massively after 2008 via QE (central bank reserves, not circulating money), and inflation remained low until 2021. That structural break in the money-inflation link is inside this panel and not present in the two canonical papers.
 
 ## 2. Objectives
 
 ### Objective A — AVERAGE (Lucas-style, long-run)
 
-- Country-mean money growth vs country-mean inflation, n ≈ 163 (aligns with Lucas’s **first** quantity-theoretic illustration in cross-section / long-average spirit).
-- Country-mean money growth vs country-mean **GDP growth** — **descriptive only**; this is **not** Lucas’s **second** illustration. In Lucas (1980), the second illustration is money growth vs **nominal interest rates** (U.S. T-bill rate with filtered quarterly data). The current panel lacks a harmonized nominal rate series, so that leg is **out of scope** until extended. Extension options (paths, time budgets, pitfalls) are spelled out here: **`02_data/supporting/lucas_ii_nominal_rate_plan.md`**.
-
-#### Lucas (ii) — how to proceed when unsure
-
-Default under time constraint: stay on **Path A** in `lucas_ii_nominal_rate_plan.md` (no new data—clear verbal caveat only). Use **Path B** for a credible **US‑only appendix** (~1–3 hours). Reserve **Path C** for multi‑country merges only if you revisit the repo as data work—not required for YoY Obj B/C.
+- Country-mean money growth vs country-mean inflation — 105 countries with ≥30 annual observations. Aligns with Lucas’s **first** quantity-theoretic illustration.
+- Country-mean money growth vs country-mean **GDP growth** — descriptive only; not Lucas’s second illustration.
+- Lucas’s **second** illustration (money vs nominal interest rate) is handled by **Objective D** (US-only, `05_lucas_us_appendix.ipynb`). Cross-country nominal rates are not harmonized in this panel.
 
 ### Objective B — YoY (within-country, short-run)
 
@@ -85,15 +88,9 @@ Placebo rule:
 
 ## 5. Canonical Execution Path
 
-From project root:
-
-1. Read `README.md` and `CODE_GUIDE.md`.
-2. Run or inspect notebooks in `03_analysis_notebooks/`.
+1. Read `README.md` and this file.
+2. Open and run notebooks in `03_analysis_notebooks/` (order: `01` → `02` → `03` → `04` → `05`).
 3. Use outputs in `04_current_results/` for claims.
-4. Optional rebuild:
-   - `python3 -m pip install -r 90_reproduction_scripts/requirements.txt`
-   - `python3 90_reproduction_scripts/run_rebuild.py`
-   - `python3 90_reproduction_scripts/build_graphs.py`
 
 ## 6. Canonical Outputs
 
@@ -112,3 +109,47 @@ A cycle is done only when:
 3. The YoY block reports fixed-sample and familywise-adjusted inference.
 4. The IT regime section opens with caveats before any treatment-effect number.
 5. Narrative language matches measured diagnostics and claim tiers.
+
+---
+
+## 8. Objective D — US-Only Lucas (ii) Appendix (added 2026-05-03)
+
+**Purpose:** Replicate Lucas (1980)'s second illustration for the United States only — money growth vs nominal interest rates in low-frequency / moving-average filtered data. This is the leg the cross-country panel cannot do (no harmonized rate series). Framed explicitly as a pedagogical appendix, not a cross-country claim.
+
+**Estimand:** Low-frequency co-movement between M2 growth, CPI inflation, and the nominal short rate (US only, annual 1960–2024 or longest available).
+
+**Data sources (all FRED):**
+
+| Series         | FRED code  | Notes                        |
+| -------------- | ---------- | ---------------------------- |
+| M2 money stock | `M2SL`     | Monthly, seasonally adjusted |
+| CPI all items  | `CPIAUCSL` | Monthly, seasonally adjusted |
+| 3-month T-bill | `TB3MS`    | Monthly, secondary market    |
+
+Annualise by taking December observation or annual average — document which.
+
+**Method:**
+
+1. Compute annual log changes: `m2_growth = log(M2_t / M2_{t-1})`, same for `inflation` from CPI.
+2. Convert T-bill from percent to decimal (`/ 100`).
+3. Apply a centred moving-average filter (window = 5 years) to each series — this is the "low-frequency" filter Lucas used to strip business-cycle noise.
+4. Scatter plots:
+   - Plot A: filtered M2 growth vs filtered inflation (should be near 45-degree line).
+   - Plot B: filtered M2 growth vs T-bill rate (Fisher / QTM prediction).
+5. Add OLS fit line + R² to each scatter.
+
+**Outputs:**
+
+- Notebook: `03_analysis_notebooks/05_lucas_us_appendix.ipynb`
+- Figures: `04_current_results/figures/lucas_us_inflation.png`, `lucas_us_tbill.png`
+- One-row CSV summary: `04_current_results/tables/lucas_us_summary.csv` (slope, R², n)
+
+**Claim tier:** Descriptive / pedagogical. Single country, no causal claim. Label as appendix in the report.
+
+**Framing in report:** "Lucas's second illustration links money growth to nominal interest rates using US quarterly data. We reproduce the spirit of that exercise using annual FRED data and a 5-year moving-average filter. The results are consistent with the Fisher relation but are single-country descriptive evidence only."
+
+**What not to do:**
+
+- Do not pool with the cross-country panel.
+- Do not label this as a replication of Lucas's exact filters (he used a different MA specification).
+- Do not make policy claims.
