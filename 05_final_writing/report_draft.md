@@ -12,7 +12,7 @@ The central result is the **wedge between the long-run AVERAGE estimate and the 
 
 ## 2. Data and panel
 
-- 160 countries, 1991–2023, 4,643 rows.
+- 160 countries, 1991–2024, 4,750 rows.
 - Inputs: `02_data/analysis_ready/macro_growth_merged.csv`, `02_data/supporting/phase1_controls.csv`, `02_data/supporting/phase1_instruments.csv`.
 - Output gap: `output_gap_hp` from annual HP filter (`lambda = 6.25`).
 - IT adoption dates: `02_data/supporting/it_adoption_dates.csv` (Roger 2010 + Hammond 2012 reconciliation column).
@@ -63,14 +63,14 @@ Same 160-country panel, different estimand: within-country year-on-year variatio
 
 The full-sample short-run slope is **0.665** — already well below the long-run 0.952, confirming the wedge. But the clean-sample slope collapses to **0.040** (not significant at 5%). **This is the central result.** Strip out the post-Soviet and Latin American hyperinflation episodes and year-to-year money growth has essentially no detectable short-run effect on inflation in the remaining 123 countries. This is exactly what the QE decade shows: central banks expanded M2 for a decade without triggering inflation.
 
-### Phillips curve
+### AR(1)+M2 persistence regression
 
 Adding lagged inflation and output gap:
 
 | Variable | Coef | p-value |
 |---|---|---|
 | inflation(t−1) | 0.593 | <0.001 |
-| output gap (HP) | −0.115 | 0.214 |
+| output gap (HP) | −0.001 | 0.307 (n.s.) |
 | Within R² | 0.548 | — |
 
 Augmented with m2_growth:
@@ -78,17 +78,17 @@ Augmented with m2_growth:
 | Variable | Coef | p-value |
 |---|---|---|
 | inflation(t−1) | 0.445 | <0.001 |
-| output gap (HP) | −0.174 | 0.041 |
+| output gap (HP) | −0.001 | 0.081 (n.s.) |
 | m2_growth | **0.349** | 0.032 |
 | Within R² | 0.672 | — |
 
-Money growth adds explanatory power beyond lagged inflation and the output gap. Holdout forecast (train ≤ 2015, test 2016–2020): augmented Phillips RMSE is 8.1% lower than a naïve AR(1) — modest but consistent improvement.
+Money growth adds explanatory power beyond lagged inflation. The output gap is not significant in either specification after correcting the HP filter unit error (fix B-1; see ERRATA.md). Holdout forecast (train ≤ 2015, test 2016–2024): augmented RMSE is 7.6% lower than a naïve AR(1) — modest but consistent improvement. The m2_growth coefficient (0.349, p=0.032) survives the bug fix unchanged.
 
 ### LP-IV (appendix)
 
-Local projection IV horizons show a significant inflation response at h=0–3 under Holm correction. Identification is marginal (conservative first-stage F = 4.4; passes relevance gate but not the strong-IV threshold of 10). Treat as directional, not causal. See `03_analysis_notebooks/03_short_run_lp_iv.ipynb`.
+Local projection IV horizons show a significant inflation response at h=0–3 under Holm correction. Conservative first-stage F = 5.587 (passes relevance gate ≥3.84; FAILS strong-IV ≥10). IV coefficient (1.468) diverges from TWFE baseline (0.665) — a sign the exclusion restriction is not clean. All IV results are treated as directional only and are not used for inference. See `03_analysis_notebooks/03_short_run_lp_iv.ipynb`.
 
-Sources: `03_analysis_notebooks/02_panel_fe_iv_baseline.ipynb` · `04_current_results/tables/phase1_audit/core_model_results.csv` · `04_current_results/tables/phase1_audit/phillips_results.csv`
+Sources: `03_analysis_notebooks/02_panel_fe_iv_baseline.ipynb` · `03_analysis_notebooks/exports/phase1/phase1_fe_results.csv` · `03_analysis_notebooks/exports/phase1/phase1_phillips_results.csv` · Note: `04_current_results/tables/phase1_audit/phillips_results.csv` contains pre-fix values (output_gap p=0.041) and should not be used for the augmented Phillips numbers.
 
 ## 5. Objective C — IT as a regime moderator (exploratory probe)
 
@@ -122,8 +122,12 @@ Source: `03_analysis_notebooks/05_lucas_us_appendix.ipynb` · `04_current_result
 
 ## 7. Identification limits
 
-- Conservative first-stage F = 4.4 (passes relevance gate; fails strong-IV ≥ 10).
+- Conservative first-stage F = 5.587 (passes relevance gate ≥3.84; FAILS strong-IV ≥10). IV coefficient (1.468) diverges from TWFE baseline (0.665) — a sign the exclusion restriction is not clean. All IV results are treated as directional only and are not used for inference.
 - 1 significant placebo test. Drift is moderate.
+- Cross-sectional dependence confirmed (Pesaran CD = 158.4, p≈0). Driscoll-Kraay SEs (HAC kernel, bandwidth=4) preserve significance for full-sample TWFE (coef=0.665, p=0.003) but not clean-sample (coef=0.040, p=0.145).
+- COVID robustness: excluding 2020–2021 leaves coefficients essentially unchanged (full: 0.664, clean: 0.040). COVID years do not drive the result.
+- Sample mismatch: TWFE on the same 108-country Obj-A subset gives coef=0.820 (p<0.001) — the wedge is real across consistent samples, not a composition artifact of the extra 52 countries. The wedge between long-run country-mean (Obj A) and short-run TWFE (Obj B) estimates reflects a mechanical between-vs-within decomposition. Confirming this reflects genuine regime change requires a Mundlak decomposition or Pesaran mean-group estimator, which is left for future work.
+- US appendix: Newey-West HAC (bandwidth=4) confirms M2→Inflation slope=0.474 but with borderline p=0.060; M2→T-bill is n.s. after HAC (p=0.155). The T-bill Fisher result should be treated as illustrative only.
 - All IV/LP-IV results are retained as associational/directional only.
 - Claims are bounded to descriptive (Obj A, D) and exploratory (Obj B, C).
 

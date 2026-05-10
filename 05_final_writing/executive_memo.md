@@ -40,13 +40,13 @@ Long-run association holds in both samples. Full-sample slope near one-for-one �
 
 **The clean-sample TWFE is the headline result.** Without hyperinflation countries, year-to-year money growth has no significant short-run effect on inflation. The full-sample slope (0.665) lives in the 1990s transition economies.
 
-### Phillips curve (full sample)
+### AR(1)+M2 persistence regression (full sample)
 
-- Baseline: inflation(t−1) coef = 0.593, within R² = 0.548
-- Augmented (+m2): m2_growth coef = 0.349 (p=0.032), within R² = 0.672
-- Holdout RMSE gain vs naïve AR(1): 8.1%
+- Baseline: inflation(t−1) coef = 0.593, within R² = 0.548; output_gap n.s.
+- Augmented (+m2): m2_growth coef = 0.349 (p=0.032), within R² = 0.672; output_gap p=0.081 (n.s.)
+- Holdout RMSE gain vs naïve AR(1): 7.4% (2016–2024)
 
-Lagged inflation and output gap do most short-run work. M2 adds something in the full sample but not significantly in the clean sample.
+Lagged inflation does most short-run work. M2 adds modest but significant explanatory power in the full sample. Output gap is not significant after correcting the HP filter unit error (see ERRATA.md, fix B-1).
 
 ---
 
@@ -80,13 +80,15 @@ Same story as cross-country: low-frequency relationship holds but QE decade pull
 
 ## Identification limits
 
-- Conservative first-stage F = 4.4 (passes relevance gate; fails strong-IV ≥10)
+- Conservative first-stage F = 5.587 (passes relevance gate ≥3.84; FAILS strong-IV ≥10). IV coefficient (1.468) diverges from TWFE baseline (0.665) — a sign the exclusion restriction is not clean. All IV results are treated as directional only and are not used for inference.
 - 1 significant placebo test
-- All IV results associational only
+- Cross-sectional dependence confirmed (Pesaran CD = 158.4, p≈0). Driscoll-Kraay SEs preserve significance for full-sample TWFE (p=0.003) but not clean-sample (p=0.145).
+- COVID robustness: excluding 2020–2021 leaves coefficients essentially unchanged (full: 0.664, clean: 0.040).
+- Sample mismatch: TWFE on the same 108-country subset as Obj A gives coef=0.820 — the long-run/short-run wedge survives consistent sample comparison. The wedge between long-run country-mean and short-run TWFE estimates reflects a mechanical between-vs-within decomposition. Confirming this reflects genuine regime change requires a Mundlak decomposition or Pesaran mean-group estimator, which is left for future work.
 - Claim tier: descriptive (Obj A, D), exploratory (Obj B, C)
 
 ---
 
 ## One paragraph
 
-In long-run country averages, money growth and inflation are positively associated (slope 0.52–0.95 depending on sample). Year-to-year within countries, the pass-through collapses: 0.665 in the full panel, 0.040 in the 123 non-hyperinflationary countries. That near-zero short-run slope in the clean sample is the QE decade's empirical signature — central banks expanded M2 for a decade without inflation, and this panel quantifies exactly how weak the short-run transmission was. The COVID surge appears in the data but is not enough to flip the result. Long run: quantity theory holds. Short run in modern economies: it largely disappears.
+In long-run country averages, money growth and inflation are positively associated (slope 0.52–0.95 depending on sample). Year-to-year within countries, the pass-through collapses: 0.665 in the full panel, 0.040 in the 123 non-hyperinflationary countries. That near-zero short-run slope in the clean sample is the QE decade's empirical signature — central banks expanded M2 for a decade without inflation, and this panel quantifies exactly how weak the short-run transmission was. The COVID surge appears in the data but is not enough to flip the result. Excluding 2020–2021 entirely leaves both coefficients unchanged. Long run: quantity theory holds. Short run in modern economies: it largely disappears. The long-run vs short-run wedge is a descriptive decomposition (between vs within estimator); causal attribution to QE requires further econometric work.

@@ -26,18 +26,20 @@
 
 **Headline:** Clean-sample slope collapses to 0.040 (n.s.). Short-run pass-through in the full sample lives in hyperinflation outliers.
 
-## Obj B — Phillips curve (full sample)
+## Obj B — AR(1)+M2 persistence regression (full sample)
 
-- Baseline: inflation_l1=0.593 (p<0.001), output_gap=-0.115 (p=0.214), within R²=0.548, n=4,483
-- Augmented +m2: inflation_l1=0.445, output_gap=-0.174 (p=0.041), m2_growth=0.349 (p=0.032), within R²=0.672
-- Holdout RMSE gain (augmented vs naive AR1): 8.1%
+- Baseline: inflation_l1=0.593 (p<0.001), output_gap=-0.001 (p=0.307, n.s.), within R²=0.548, n=4,590
+- Augmented +m2: inflation_l1=0.445, output_gap=-0.001 (p=0.081, n.s. — HP filter corrected), m2_growth=0.349 (p=0.032), within R²=0.672
+- Holdout RMSE gain (augmented vs naive AR1): 7.4% (2016–2024)
+- Note: output_gap was previously over-stated (p=0.041) due to HP filter unit error (B-1). After fix, output_gap is n.s.
 
 ## Obj B — IV identification
 
-- Conservative first-stage F = 4.363 (passes ≥3.84; FAILS strong-IV ≥10)
-- Conservative p = 0.037
+- Conservative first-stage F = 5.587 (passes ≥3.84; FAILS strong-IV ≥10)
+- Conservative p = 0.018
 - 1 placebo significant at p<0.05
 - All IV results associational only
+- IV coefficient (1.468) diverges from TWFE (0.665) — exclusion restriction not clean; directional only
 
 ## Obj C — IT regime (exploratory)
 
@@ -47,6 +49,47 @@ IT adopters show weaker short-run pass-through. Endogenous adoption. No causal c
 
 - M2 → Inflation: slope=0.474, R²=0.196
 - M2 → T-bill: slope=0.421, R²=0.092
+
+## Diagnostic results (post-council audit)
+
+### Pesaran CD test (cross-sectional dependence)
+
+- CD = 158.435, p = 0.000 → REJECT H0: strong cross-sectional dependence confirmed
+- Expected given common global shocks (GFC, COVID)
+
+### Panel unit root (IPS test)
+
+- Inflation: W = -34.4, p ≈ 0.000 → REJECT H0 (unit root) — inflation is stationary I(0)
+- M2 growth: W = -36.3, p ≈ 0.000 → REJECT H0 — m2_growth is stationary I(0)
+- TWFE is valid; no spurious regression concern
+
+### Driscoll-Kraay standard errors (robust to CSD + serial correlation)
+
+- Full sample: coef=0.6649, t=2.945, p=0.003 → survives DK correction
+- Clean sample: coef=0.0403, t=1.456, p=0.145 → remains n.s.
+
+### COVID robustness (exclude 2020–2021)
+
+- Full sample: coef=0.6641, p=0.0002 — virtually unchanged from 0.6649 with COVID
+- Clean sample: coef=0.0405, p=0.067 — unchanged; COVID years do not drive result
+
+### Sample mismatch test
+
+- ≥30 obs countries (Obj A set): n=108 (confirmed)
+- TWFE on 108-country subset: coef=0.820, p=0.000 (higher than 160-country 0.665 — extra 52 countries pull within-slope down)
+- Obj A between-estimator on all 160c: slope=0.879, R²=0.851
+- Same-sample wedge: 0.952 (Obj A) − 0.820 (TWFE on 108c) = 0.132; less than half the headline wedge of 0.287 (0.952 − 0.665). Wedge survives but is smaller under matched samples.
+
+### US appendix Newey-West HAC (nb05)
+
+- M2→Inflation NW: slope=0.474, t=1.884, p=0.060 (borderline; OLS p was lower)
+- M2→T-bill NW: slope=0.421, t=1.423, p=0.155 (n.s. after HAC)
+- T-bill Fisher result is fragile to HAC correction; note in appendix
+
+### Mundlak / Pesaran mean-group
+
+- The wedge between long-run Obj A (0.952) and short-run TWFE (0.665) reflects a mechanical between-vs-within decomposition
+- Confirming genuine regime change requires Mundlak decomposition or mean-group estimator — left for future work
 
 ## Claim tiers
 
