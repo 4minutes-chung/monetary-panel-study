@@ -4,19 +4,19 @@ This folder contains the readable economics analysis notebooks.
 
 ## Notebook order
 
-0. `00_data_refresh_and_rebuild.ipynb`
-   - Notebook-first setup: refresh World Bank M2/CPI/GDP, rebuild `macro_growth_merged.csv`, then rerun canonical rebuild to sync `04_current_results/`.
 1. `01_lucas_replication.ipynb`
    - Obj A motivation.
    - Lucas-style long-run replication and descriptive cross-country pattern.
 2. `02_panel_fe_iv_baseline.ipynb`
-   - Obj **B** YoY baseline: TWFE FE + IV plus Phillips (+ output gap + money), holdout inflation forecast notebook block; aligns with canonical `tables/phase1_audit/phillips_*.csv` after rebuild.
+   - Obj **B** YoY baseline: TWFE, diagnostics, Phillips block, sub-periods, COVID scatter, distributed lag, and core figures.
 3. `03_short_run_lp_iv.ipynb`
-   - Obj **B** continuation: LP-IV dynamics (fixed sample, Holm on inflation horizons, IT stratification).
+   - Obj **B** appendix: LP-IV dynamics (fixed sample, Holm on inflation horizons, IT stratification). Directional only.
 4. `04_did_it_event_study.ipynb`
    - Obj **C** exploratory: IT event-study and slope-shift probe (caveat-first).
+5. `05_lucas_us_appendix.ipynb`
+   - Obj **D** appendix: US FRED low-frequency Lucas-style check.
 
-Old “Phase 0/1/2” labels in cells = `01` / `02` / `03`; `04` = Obj C.
+Old "Phase 0/1/2" labels in cells = `01` / `02` / `03`; `04` = Obj C.
 
 ## Outputs
 
@@ -25,9 +25,6 @@ Old “Phase 0/1/2” labels in cells = `01` / `02` / `03`; `04` = Obj C.
 
 ## Reproducibility note
 
-For parity checks and publication-style exports, either:
-
-- run `00_data_refresh_and_rebuild.ipynb` (notebook-first path), or
-- run scripts directly:
-  - `python3 90_reproduction_scripts/run_rebuild.py`
-  - `python3 90_reproduction_scripts/build_graphs.py`
+Run notebooks `01` through `05` top-to-bottom. Each notebook finds the project root from
+`02_data/analysis_ready/macro_growth_merged.csv` and writes current figures/tables into
+`04_current_results/`.

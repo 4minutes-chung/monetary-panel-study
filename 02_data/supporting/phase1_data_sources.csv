@@ -1,3 +1,0 @@
-file,source,note
-phase1_controls.csv,World Bank API,"Controls: trade_open, gdp_pc_growth, pop_growth, investment_share"
-phase1_instruments.csv,World Bank API + FRED,"IV candidates: lagged m2, depth x fedfunds level/change"

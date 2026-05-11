@@ -1,13 +1,14 @@
 # The Quantity Theory in the Age of QE and COVID
-### A 160-Country, 34-Year Revisit of Lucas (1980)
+
+## A 160-Country, 34-Year Revisit of Lucas (1980)
 
 ---
 
-## The Question
+### The Question
 
 Print money → get inflation. Is that still true?
 
-The textbook says yes. But central banks printed trillions from 2008 to 2020 and got almost nothing. Then 2021 hit and inflation went to 8%. This project uses 160 countries from 1991 to 2024 to answer: **when does money printing actually cause inflation, and when doesn't it?**
+The textbook says yes. But central banks printed trillions from 2008 to 2020 and got almost nothing. Then 2021 hit and inflation went to 8%. This project uses 160 countries from 1991 to 2024 to answer: **when does money printing actually cause inflation, and when that relationship is less strong as we all think it is?**
 
 ---
 
@@ -91,7 +92,7 @@ This is where the moderate monetarist gets vindication. Across 102 countries: co
 
 Countries that formally adopted inflation targeting — where the central bank explicitly commits to a number — show even weaker short-run pass-through after adoption. Post-adoption slope shift: **−0.49**.
 
-The intuition: if everyone believes the central bank will hit its target, money growth stops mattering for near-term inflation expectations. **Credibility severs the short-run link.**
+The intuition: if everyone believes the central bank will hit its target, money growth stops mattering for near-term inflation expectations. **This is consistent with credibility weakening the short-run link.**
 
 This is a pattern, not a causal claim. IT adoption is endogenous — countries adopt it after high-inflation episodes. But the direction is consistent with the broader story.
 
@@ -126,8 +127,8 @@ The QE decade (2009–2020) pulls both slopes below the long-run benchmark. Post
 | **Sub-period: QE era 2008–2019** | **0.001** (n.s.) | — |
 | **Sub-period: COVID 2020–2024** | **−0.014** (n.s.) | — |
 | COVID cross-country scatter (n=102) | slope=**0.494** (p<0.0001, R²=0.26) | — |
-| 1-year distributed lag (m2_l1) | **0.101** (p=0.006) | — |
-| 2-year distributed lag (m2_l2) | 0.011 (n.s.) | — |
+| 1-year distributed lag (m2_l1) | **0.257** (p<0.001) | — |
+| 2-year distributed lag (m2_l2) | 0.132 (p<0.001) | — |
 
 Every check on the year-on-year link within countries tells the same story. The between-country COVID scatter is the exception — and the partial monetarist vindication.
 
@@ -144,8 +145,8 @@ Year to year, for the 123 countries that avoid hyperinflation, the slope is 0.04
 **3. COVID inflation: monetarist vindication — but only cross-sectionally.**
 Within any country, year-to-year M2 changes didn't predict when inflation arrived. But across countries, those that printed more in 2020–2021 got more inflation in 2021–2023 (slope=0.494, R²=0.26). The channel was fiscal transfers to households, not QE reserves to banks.
 
-**4. The distributed lag exists but fades fast.**
-M2 growth predicts inflation one year forward (coef=0.101, p=0.006). The two-year lag is zero. Money matters at a 1-year horizon — but the effect is modest and dissipates.
+**4. The distributed lag persists for at least 2 years.**
+M2 growth predicts inflation at h=0 (coef=0.338), h=1 (coef=0.257), and h=2 (coef=0.132) — all significant. The effect decays but does not disappear by year 2. Money has a multi-year forward signal.
 
 ---
 
@@ -161,4 +162,4 @@ M2 growth predicts inflation one year forward (coef=0.101, p=0.006). The two-yea
 
 ## One Paragraph
 
-In long-run country averages, money growth and inflation move together — slope 0.52 to 0.95 depending on sample, consistent with Lucas (1980) and the canonical QTM papers. Year to year within countries, the pass-through collapses to near zero in the 123 non-hyperinflationary economies that define the modern world. Sub-period TWFE confirms the break happened at the GFC: pre-2008 slope was 0.113 (significant), post-2008 it has been near zero in every era including COVID. But the 2021–2023 inflation is not fully unexplained by money: across 102 countries, those that expanded M2 most in 2020–2021 saw the most inflation in 2021–2023 (slope=0.494, R²=0.26). The transmission was cross-sectional — fiscal transfers to households, not reserves to banks — and it operated through a 1-year lag (m2_l1 coef=0.101, p=0.006). The long-run quantity theory survives intact. The short-run within-country version largely does not. But the COVID era offers the moderate monetarist a partial vindication: the mechanism wasn't dead, it just requires the right kind of money, distributed the right way.
+In long-run country averages, money growth and inflation move together — slope 0.52 to 0.95 depending on sample, consistent with Lucas (1980) and the canonical QTM papers. Year to year within countries, the pass-through collapses to near zero in the 123 non-hyperinflationary economies that define the modern world. Sub-period TWFE confirms the break happened at the GFC: pre-2008 slope was 0.113 (significant), post-2008 it has been near zero in every era including COVID. But the 2021–2023 inflation is not fully unexplained by money: across 102 countries, those that expanded M2 most in 2020–2021 saw the most inflation in 2021–2023 (slope=0.494, R²=0.26). The transmission was cross-sectional — fiscal transfers to households, not reserves to banks — and it operated through a distributed lag (h=1 coef=0.257, h=2 coef=0.132, both p<0.001). The long-run quantity theory survives intact. The short-run within-country version largely does not. But the COVID era offers the moderate monetarist a partial vindication: the mechanism wasn't dead, it just requires the right kind of money, distributed the right way.

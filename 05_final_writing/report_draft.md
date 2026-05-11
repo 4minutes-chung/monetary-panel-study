@@ -27,7 +27,7 @@ The answer to question 1 is yes, with slope 0.52–0.95 depending on sample. The
 2 and 3 is more interesting: the year-to-year within-country link has been near zero since 2008,
 but across countries, those that expanded M2 more in 2020–21 got significantly more inflation in
 2021–23. The COVID inflation was a cross-sectional monetarist story — driven by the scale of fiscal
-transfers, not by QE bank reserves — and operated through a 1-year lag that disappears by year 2.
+transfers, not by QE bank reserves — and operated through a distributed lag that persists at least 2 years.
 
 Lucas's second illustration (money growth → nominal interest rates) is handled in a US-only appendix
 using FRED data (Obj D, Section 7).
@@ -80,7 +80,7 @@ development, velocity trends, and reserve accumulation across countries.
 countries): slope = 0.49, R² = 0.16. Consistent with the Fisher relation at low frequencies.
 Below 1 because lending rates embed credit risk above the policy rate.
 
-**Figure:** `04_current_results/figures/13_country_means_m2_vs_inflation.png` (full-sample scatter)
+**Figure:** `04_current_results/figures/between_within_decomposition.png` (between vs within panels)
 
 ---
 
@@ -134,13 +134,15 @@ unit root null. TWFE is valid; no spurious regression concern.
 
 ### 4.3 Between vs Within Decomposition
 
-The wedge (0.524 long-run vs 0.040 short-run) is explained visually by separating the two
-estimators on the same data:
+The between-within figure uses all 123 clean countries:
 
-- **Left panel (between):** Country time-averages. Slope = 0.52, R² = 0.53. Positive, tight.
+- **Left panel (between):** Country time-averages. Slope = 0.28, R² = 0.28. Positive, clear.
 - **Right panel (within):** Each observation demeaned by its country mean. Slope = 0.04, R² ≈ 0. Flat.
 
-Same 123 countries, same 34 years. The question "do countries with more money have more inflation"
+Same 123 countries, same 34 years. (Note: Obj A reports slope = 0.524 because it restricts to the
+83 countries with ≥30 observations — a different filter applied for the long-run cross-section only.)
+
+The question "do countries with more money have more inflation"
 has a very different answer than "does a country have more inflation in the years when it prints more
 money." The first question is about long-run structural differences; the second is about year-to-year
 monetary transmission. They measure different things.
@@ -238,17 +240,17 @@ clustered SEs):
 
 | Horizon | Coef | SE | p-value |
 |---|---|---|---|
-| h=0 (contemporaneous) | ~0.35 | — | < 0.05 |
-| h=1 (1-year lag) | **0.101** | 0.037 | 0.006 |
-| h=2 (2-year lag) | 0.011 | 0.044 | 0.801 (n.s.) |
+| h=0 (contemporaneous) | **0.338** | 0.118 | 0.004 |
+| h=1 (1-year lag) | **0.257** | 0.048 | <0.001 |
+| h=2 (2-year lag) | **0.132** | 0.036 | <0.001 |
 
-The 1-year lag is independently significant alongside the contemporaneous term. The 2-year lag
-is indistinguishable from zero. **The monetary transmission signal is short-lived — it has a
-1-year carry and then dissipates.**
+All three horizons are significant (full sample, entity + time FEs, clustered SEs). The effect
+is largest contemporaneously and decays across horizons, but has not fully dissipated by year 2.
+**The monetary transmission signal persists for at least 2 years.**
 
-This is consistent with the COVID narrative at the global scale: M2 surged in 2020 (the "2020"
-observation in the world median chart), inflation followed in 2021–2022 (one year later), and by
-2023 had returned toward baseline as the lagged monetary signal faded.
+This is consistent with the COVID narrative: M2 surged in 2020, inflation peaked in 2021–2022,
+and continued elevated into 2023 — consistent with a multi-year distributed lag rather than a
+purely one-period effect.
 
 **Figure:** `04_current_results/figures/distributed_lag_irf.png`
 
@@ -290,9 +292,9 @@ collinearity note):
 pass-through per 1 pp of M2 growth than the baseline. This is large relative to the baseline slope
 of 0.636 — adoption nearly halves the short-run transmission.
 
-**Interpretation:** Credibility works. Once a central bank credibly commits to a numerical inflation
-target, households and firms form price expectations anchored to that target rather than to observed
-money growth. M2 can expand without triggering inflation because nobody expects it to.
+**Interpretation:** This is consistent with a credibility view. Once a central bank credibly commits
+to a numerical inflation target, households and firms may anchor price expectations to that target
+rather than to observed money growth — which would allow M2 to expand without triggering inflation.
 
 **The pre-adoption it_m2 term is n.s. (p=0.281):** IT adopters did not have a statistically different
 slope before adoption compared to never-adopters. The change is genuinely post-adoption.
@@ -398,7 +400,7 @@ M2 timing still did not predict inflation timing during 2020–2024. But across 
 that expanded M2 more in 2020–21 got substantially more inflation in 2021–23 (slope = 0.494,
 p < 0.0001, R² = 0.26, n=102). The transmission channel was fiscal — direct transfers to
 households raised aggregate demand — not the bank-reserve QE channel that had been dormant
-since 2008. The monetary signal operated through a 1-year lag and dissipated by year 2.
+since 2008. The monetary signal operates through a distributed lag decaying from h=0 (0.338) to h=2 (0.132), persisting at least 2 years.
 
 **Credibility severs the short-run link.** IT adoption is associated with a −0.485 slope shift in
 the M2→inflation pass-through (p<0.001), consistent with the view that anchored expectations
@@ -411,7 +413,7 @@ COVID-era data pulling it back.
 
 **In two sentences:** The long-run quantity theory lives, confirmed through 2024. The short-run
 version has been effectively dead since the GFC — and the COVID episode reveals why: fiscal
-helicopter money causes cross-country inflation differentials that QE bank reserves never did.
+transfers are associated with cross-country inflation differentials that QE bank reserves were not.
 
 ---
 
@@ -428,7 +430,7 @@ helicopter money causes cross-country inflation differentials that QE bank reser
 | Key result file | What it contains |
 |---|---|
 | `04_current_results/summary.md` | All headline numbers, diagnostic results |
-| `04_current_results/tables/phase1_audit/` | Core model tables, scorecard, inference sensitivity |
+| `04_current_results/tables/lucas_us_summary.csv` | US appendix slope table |
 | `04_current_results/figures/` | All figures — see table below |
 
 | Figure | Description |
