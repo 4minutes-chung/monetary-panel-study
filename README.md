@@ -1,54 +1,67 @@
-# Does the Quantity Theory Hold in the QE-to-COVID Era?
+# Money Growth and Inflation After QE and COVID
 
-Cross-country macro panel, 160 countries, 1991–2024. The canonical money-inflation papers (McCandless & Weber 1995; De Grauwe & Polan 2005) predate QE and COVID. This project updates them.
+160-country annual macro panel, 1991-2024.
 
-## Headline finding
+Subtitle: long-run quantity-theory evidence survives; short-run within-country pass-through weakens after 2008.
 
-| Estimator | Full sample (160c) | Clean sample (123c, no hyperinflation) |
-|---|---|---|
-| Long-run country means (Obj A) | 0.952 | 0.524 |
-| Short-run TWFE year-on-year (Obj B) | 0.665 | **0.040** (n.s.) |
+This is a descriptive empirical audit, not a causal policy paper.
 
-In modern non-hyperinflationary economies, year-to-year money growth barely moves inflation. The QE decade in one number.
+## Main Finding
 
-## Notebooks (run in order)
+| Question | Estimate | Read |
+|---|---:|---|
+| Long-run country averages, full sample | 0.952 | near one-for-one |
+| Long-run country averages, clean sample | 0.524 | positive, smaller outside high-inflation episodes |
+| Short-run TWFE, full sample | 0.665 | driven partly by high-inflation episodes |
+| Short-run TWFE, clean sample | 0.040 | small and not robustly significant |
 
-| Notebook | What |
+The useful tension is simple: countries with persistently higher broad money growth have higher long-run inflation, but year-to-year broad money growth does not map cleanly into year-to-year inflation in modern low-inflation regimes, especially after 2008.
+
+## Notebooks
+
+Run in order:
+
+| Notebook | Role |
 |---|---|
-| `01_lucas_replication` | Obj A — Lucas-style long-run country-mean scatter, full + clean samples, cross-country lending rate |
-| `02_panel_fe_iv_baseline` | Obj B — TWFE baseline + Phillips curve, clean-sample robustness |
-| `03_short_run_lp_iv` | Obj B — LP-IV horizons (appendix, weak instrument) |
-| `04_did_it_event_study` | Obj C — IT adoption event study + slope-shift probe |
-| `05_lucas_us_appendix` | Obj D — US M2 vs inflation and T-bill, 1960–2024, 5-yr MA |
+| `03_analysis_notebooks/01_lucas96_mcweber_replication.ipynb` | Lucas (1996) / McCandless-Weber long-run country-average update |
+| `03_analysis_notebooks/02_money_inflation_twfe.ipynb` | Main short-run TWFE notebook: full/clean sample, pre/post-2008, compact robustness, between-vs-within |
+| `03_analysis_notebooks/02b_money_inflation_exploratory.ipynb` | Appendix diagnostics and cumulative distributed-lag scaffold |
+| `03_analysis_notebooks/03_short_run_lp_iv.ipynb` | LP-IV appendix, directional only |
+| `03_analysis_notebooks/04_did_it_event_study.ipynb` | Inflation-targeting appendix, exploratory only |
+| `03_analysis_notebooks/05_lucas_us_appendix.ipynb` | Lucas (1980)-inspired U.S. appendix |
 
 ## Data
 
-- `02_data/analysis_ready/macro_growth_merged.csv` — main panel (columns: `Country Name, year, m2_growth, inflation, gdp_growth, sample_main, sample_low_inflation`)
-- `02_data/raw/fred_*.csv` — US FRED series (M2, CPI, T-bill, M1)
-- `02_data/supporting/intl_lending_rates.csv` — World Bank lending rates, 147 countries 1991–2024
-- `02_data/supporting/it_adoption_dates.csv` — IT adoption dates (Roger 2010 + Hammond 2012)
+- `02_data/analysis_ready/macro_growth_merged.csv` - main cleaned panel.
+- `02_data/DATA_PROVENANCE.md` - source map for checked-in data snapshots.
+- `02_data/raw/worldbank_wdi_core_1991_2024.csv` - World Bank WDI source snapshot.
+- `02_data/raw/fred_*.csv` - U.S. FRED source snapshots.
+- `02_data/supporting/wb_controls_1991_2024.csv` - World Bank control variables.
+- `02_data/supporting/bartik_instruments_1991_2024.csv` - appendix IV support file.
+- `02_data/supporting/intl_lending_rates.csv` - World Bank lending-rate snapshot.
+- `02_data/supporting/it_adoption_dates.csv` - inflation-targeting adoption dates.
 
-## Sample flags
-
-- `sample_main = 1` — all 160 countries
-- `sample_low_inflation = 1` — 123 countries, drop if any year > 40% inflation (removes post-Soviet and Latin American hyperinflation episodes from the 1990s)
-
-## Read first
-
-1. `01_research_question/research_target.md` — research contract
-2. `04_current_results/summary.md` — all key numbers
-3. `05_final_writing/report_draft.md` — full report
-4. `05_final_writing/executive_memo.md` — one-page summary
+Data files are checked-in CSV snapshots. This repo intentionally contains no standalone Python scripts.
 
 ## Rebuild
 
 ```bash
-# Data (if refreshing from World Bank / FRED)
-python3 02_data/supporting/fetch_intl_rates.py
-
-# Notebooks
-jupyter nbconvert --to notebook --execute --inplace 03_analysis_notebooks/01_lucas_replication.ipynb
-# ... repeat for 02–05
+jupyter nbconvert --to notebook --execute --inplace 03_analysis_notebooks/01_lucas96_mcweber_replication.ipynb
+jupyter nbconvert --to notebook --execute --inplace 03_analysis_notebooks/02_money_inflation_twfe.ipynb
+jupyter nbconvert --to notebook --execute --inplace 03_analysis_notebooks/02b_money_inflation_exploratory.ipynb
+jupyter nbconvert --to notebook --execute --inplace 03_analysis_notebooks/03_short_run_lp_iv.ipynb
+jupyter nbconvert --to notebook --execute --inplace 03_analysis_notebooks/04_did_it_event_study.ipynb
+jupyter nbconvert --to notebook --execute --inplace 03_analysis_notebooks/05_lucas_us_appendix.ipynb
 ```
 
-Claims stay non-causal while identification gates in `summary.md` fail.
+## Claim Discipline
+
+Safe claims:
+
+- Broad money growth and inflation remain strongly associated across countries over long horizons.
+- The annual within-country association is much weaker in the clean sample.
+- The clean-sample short-run association is visible before 2008 and near zero afterward.
+- COVID is a descriptive stress episode, not a causal design.
+- IV and inflation-targeting results are exploratory appendices.
+
+Do not claim that QE caused low inflation, COVID money growth alone caused 2021-2023 inflation, or inflation targeting causally reduced pass-through.

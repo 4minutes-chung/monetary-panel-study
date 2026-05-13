@@ -1,109 +1,104 @@
 # Current Results Summary
 
+Working numeric snapshot. Narrative source of truth: `05_final_writing/report_draft.md`.
+
 ## Data
 
-- 160 countries, 1991–2024, 4,750 rows
-- `sample_main` = all 160 countries
-- `sample_low_inflation` = 123 countries (drop if any year > 40% inflation)
+- 160 countries, 1991-2024, 4,750 country-years.
+- Clean sample: 123 countries, dropping countries with any annual inflation above 40 percent.
+- Main variables: `m2_growth`, `inflation`, `gdp_growth`.
 
-## Obj A — Long-run country means (≥30 obs)
+## Long-Run Country Averages
 
-| Sample | n | M2→Inflation slope | p | R² |
-|---|---|---|---|---|
+Countries require at least 30 observations.
+
+| Sample | Countries | Slope: M2 growth -> inflation | p-value | R2 |
+|---|---:|---:|---:|---:|
 | Full | 108 | 0.952 | 4.4e-50 | 0.877 |
 | Clean | 83 | 0.524 | 6.8e-15 | 0.529 |
 
-- Full-sample GDP slope: 0.016 (p=0.484, n.s.)
-- Clean-sample GDP slope: 0.283 (p<0.001)
-- Lucas ii cross-country (M2 mean vs lending rate, 107 clean countries): slope=0.49, R²=0.16
+Read: long-run cross-country money-inflation evidence survives through 2024, but the slope is lower outside high-inflation episodes.
 
-## Obj B — Short-run TWFE
+## Short-Run TWFE
 
-| Sample | coef | p | Within R² | n |
-|---|---|---|---|---|
-| Full (160c) | 0.665 | 0.00018 | 0.504 | 4,750 |
-| Clean (123c) | 0.040 | 0.062 | 0.029 | 3,639 |
+Model:
 
-**Headline:** Clean-sample slope collapses to 0.040 (n.s.). Short-run pass-through in the full sample lives in hyperinflation outliers.
+```text
+inflation_it = country FE + year FE + beta * m2_growth_it + error_it
+```
 
-## Obj B — AR(1)+M2 persistence regression (full sample)
+| Sample | Coef | p-value | N |
+|---|---:|---:|---:|
+| Full | 0.665 | 0.0002 | 4,750 |
+| Clean | 0.040 | 0.0621 | 3,639 |
 
-| Variable | Baseline | p | Augmented | p |
-|---|---|---|---|---|
-| inflation_l1 | 0.593 | <0.001 | 0.445 | <0.001 |
-| output_gap (HP) | -0.001 | 0.307 | -0.001 | 0.081 (n.s.) |
-| m2_growth | — | — | 0.349 | 0.032 |
-| Within R² | 0.548 | — | 0.672 | — |
+Read: the annual within-country association is much weaker in the clean sample.
 
-- Holdout RMSE gain (augmented vs naive AR1): 7.4% (2016–2024)
-- output_gap n.s. after HP filter unit fix (bug B-1)
+## Pre/Post-2008 TWFE
 
-## Obj B — IV identification
+Clean sample only.
 
-- Conservative first-stage F = 6.65 (instruments extended to 2024; passes ≥3.84; FAILS strong-IV ≥10)
-- 1 placebo significant at p<0.05
-- IV coefficient (1.468) diverges from TWFE — exclusion restriction not clean; directional only
+| Era | Coef | p-value | N obs | Countries |
+|---|---:|---:|---:|---:|
+| 1991-2007 | 0.1128 | <0.001 | 1,764 | 119 |
+| 2008-2019 | 0.0005 | 0.8273 | 1,398 | 123 |
+| 2020-2024 | -0.0139 | 0.6547 | 477 | 107 |
 
-## Obj B — Sub-period TWFE (clean sample)
+Read: the short-run clean-sample association is visible before 2008 and near zero afterward.
 
-| Era | coef | p | N obs | N countries |
-|---|---|---|---|---|
-| Pre-QE 1991–2007 | 0.113 | <0.001 | 1,764 | 119 |
-| QE era 2008–2019 | 0.001 | 0.827 (n.s.) | 1,398 | 123 |
-| COVID 2020–2024 | -0.014 | 0.655 (n.s.) | 477 | 107 |
+## Compact Robustness
 
-**GFC was the breakpoint, not COVID.**
-
-## Obj B — COVID cross-country scatter
-
-| | Value |
+| Check | Result |
 |---|---|
+| Exclude 2020-2021, full sample | coef about 0.664 |
+| Exclude 2020-2021, clean sample | coef about 0.040 |
+| Driscoll-Kraay full sample | coef 0.665, p about 0.003 |
+| Driscoll-Kraay clean sample | coef 0.040, p about 0.145 |
+
+Read: clean-sample weakness is not just a COVID-year artifact.
+
+## Between-Vs-Within Figure
+
+Figure: `04_current_results/figures/between_within_decomposition.png`
+
+Purpose: show why long-run cross-country averages and annual within-country TWFE can produce different slopes.
+
+## COVID Descriptive Scatter
+
+| Statistic | Value |
+|---|---:|
 | Countries | 102 |
-| Slope (M2 2020–21 → Inflation 2021–23) | 0.494 |
+| Slope: M2 2020-2021 -> inflation 2021-2023 | 0.494 |
 | p-value | <0.0001 |
-| R² | 0.255 |
+| R2 | 0.255 |
 
-## Obj B — Distributed lag (full sample)
+Read: positive cross-country association in the COVID period, descriptive only.
 
-| Horizon | coef | SE | p |
-|---|---|---|---|
-| h=0 | 0.338 | 0.118 | 0.004 |
-| h=1 | 0.257 | 0.048 | <0.001 |
-| h=2 | 0.132 | 0.036 | <0.001 |
+## Distributed-Lag Appendix
 
-Signal persists at least 2 years, decaying across horizons.
+Figure: `04_current_results/figures/distributed_lag_cumulative_association.png`
 
-## Obj C — IT regime (exploratory)
+Current role: appendix/scaffold.
 
-| Term | coef | p |
+Interpretation: reduced-form cumulative distributed-lag association, not a causal impulse response.
+
+## Exploratory Appendices
+
+| Appendix | Result | Claim tier |
 |---|---|---|
-| m2_growth (baseline) | 0.636 | 0.002 |
-| it_m2 (pre-adoption offset) | 0.212 | 0.281 (n.s.) |
-| post_treated_m2 (post-adoption shift) | -0.485 | <0.001 |
+| LP-IV | weak/directional instruments | exploratory only |
+| Inflation targeting | post-adoption slope shift about -0.485 | exploratory only; endogenous adoption |
+| U.S. appendix | M2 -> inflation slope about 0.474 | descriptive only |
 
-Endogenous adoption. No causal claim.
+## Claim Discipline
 
-## Obj D — US appendix (FRED 1960–2024, 5-yr MA)
+Safe headline:
 
-| Relationship | slope | R² | HAC p |
-|---|---|---|---|
-| M2 → Inflation | 0.474 | 0.196 | 0.060 (borderline) |
-| M2 → T-bill | 0.421 | 0.092 | 0.155 (n.s.) |
+> Long-run cross-country money-inflation evidence remains strong through 2024, while the clean short-run within-country association weakens sharply after 2008.
 
-## Diagnostics
+Forbidden claims:
 
-| Test | Result |
-|---|---|
-| Pesaran CD | CD=158.4, p≈0 — strong CSD confirmed |
-| IPS inflation | W=-34.4, p≈0 — stationary I(0) |
-| IPS m2_growth | W=-36.3, p≈0 — stationary I(0) |
-| DK full (HAC bw=4) | coef=0.665, t=2.945, p=0.003 |
-| DK clean (HAC bw=4) | coef=0.040, t=1.456, p=0.145 |
-| COVID robustness (excl 2020–21) | full=0.664, clean=0.040 — unchanged |
-| TWFE on 108-country Obj A subset | coef=0.820, p<0.001 |
-
-## Claim tiers
-
-- Obj A, D: descriptive
-- Obj B, C: exploratory / associational
-- Forbidden: causal policy claims
+- QE caused low inflation.
+- COVID money growth alone caused 2021-2023 inflation.
+- Inflation targeting causally reduced pass-through.
+- IV results identify causal monetary transmission.

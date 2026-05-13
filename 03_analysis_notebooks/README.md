@@ -1,30 +1,37 @@
-# Notebook Organization
+# Notebook Guide
 
-This folder contains the readable economics analysis notebooks.
+This folder contains the analysis notebooks. The paper should be read by claims, not by every exploratory branch.
 
-## Notebook order
+## Run Order
 
-1. `01_lucas_replication.ipynb`
-   - Obj A motivation.
-   - Lucas-style long-run replication and descriptive cross-country pattern.
-2. `02_panel_fe_iv_baseline.ipynb`
-   - Obj **B** YoY baseline: TWFE, diagnostics, Phillips block, sub-periods, COVID scatter, distributed lag, and core figures.
-3. `03_short_run_lp_iv.ipynb`
-   - Obj **B** appendix: LP-IV dynamics (fixed sample, Holm on inflation horizons, IT stratification). Directional only.
-4. `04_did_it_event_study.ipynb`
-   - Obj **C** exploratory: IT event-study and slope-shift probe (caveat-first).
-5. `05_lucas_us_appendix.ipynb`
-   - Obj **D** appendix: US FRED low-frequency Lucas-style check.
+| Order | Notebook | Role |
+|---:|---|---|
+| 1 | `01_lucas96_mcweber_replication.ipynb` | Long-run country-average money-inflation benchmark, Lucas (1996) / McCandless-Weber framing |
+| 2 | `02_money_inflation_twfe.ipynb` | Main short-run TWFE spine: full/clean sample, pre/post-2008, compact robustness, between-vs-within |
+| 3 | `02b_money_inflation_exploratory.ipynb` | Appendix diagnostics: Driscoll-Kraay sensitivity and cumulative distributed-lag scaffold |
+| 4 | `03_short_run_lp_iv.ipynb` | LP-IV appendix, directional only |
+| 5 | `04_did_it_event_study.ipynb` | Inflation-targeting appendix, exploratory only |
+| 6 | `05_lucas_us_appendix.ipynb` | Lucas (1980)-inspired U.S. appendix |
 
-Old "Phase 0/1/2" labels in cells = `01` / `02` / `03`; `04` = Obj C.
+## Main vs Appendix
 
-## Outputs
+Main evidence:
 
-- Current canonical outputs are collected in `04_current_results/` (preferred for claims).
-- Notebook-local exports, if regenerated, land under `03_analysis_notebooks/exports/phase0|phase1|phase2/` (gitignored working copies).
+- Notebook 01 long-run country-average association.
+- Notebook 02 clean-sample TWFE and pre/post-2008 split.
+- Notebook 02 between-vs-within figure.
 
-## Reproducibility note
+Appendix evidence:
 
-Run notebooks `01` through `05` top-to-bottom. Each notebook finds the project root from
-`02_data/analysis_ready/macro_growth_merged.csv` and writes current figures/tables into
-`04_current_results/`.
+- Notebook 02b inference sensitivity and cumulative lag scaffold.
+- Notebook 03 LP-IV.
+- Notebook 04 inflation-targeting event study.
+- Notebook 05 U.S. low-frequency appendix.
+
+## Guardrails
+
+- TWFE estimates are descriptive within-country associations, not causal effects.
+- Distributed-lag estimates are reduced-form associations, not impulse responses.
+- IV results are weak/directional and should not be used as headline identification.
+- Inflation-targeting adoption is endogenous.
+- COVID results are descriptive stress evidence only.

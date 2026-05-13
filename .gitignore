@@ -27,6 +27,9 @@ outputs/notebook_phase2/
 
 # Local planning scratch
 .cursor/
+.claude/
+
+# Local agent handoff files (not for GitHub)
+CLAUDE.md
 
 CrossCountryMonetary_PDFs
-
