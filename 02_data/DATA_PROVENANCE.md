@@ -52,11 +52,12 @@ Source: **FRED (Federal Reserve Economic Data)**
 - `M2SL` — M2 money stock.
 - `CPIAUCSL` — CPI (all urban consumers).
 - `TB3MS` — 3-month Treasury bill rate.
+- `M1SL` — M1 money stock.
 - `FEDFUNDS` — Effective federal funds rate.
 
 Use:
 
-- `M2SL`, `CPIAUCSL`, `TB3MS`: U.S. low-frequency appendix (notebook 05).
+- `M1SL`, `M2SL`, `CPIAUCSL`, `TB3MS`: U.S. low-frequency appendix (notebook 05). M1SL truncated at 2019 to avoid May 2020 definitional break; M2SL used for 1960–2024.
 - `FEDFUNDS`: support input for the external-rate Bartik-style instrument file.
 
 ## 3. Data source links and Methodology

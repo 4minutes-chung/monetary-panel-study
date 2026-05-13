@@ -46,8 +46,10 @@ Two samples are used:
 
 | Sample | Countries | Rows | Definition |
 |---|---:|---:|---|
-| Full | 160 | 4,750 | all available country-years |
-| Clean | 123 | 3,639 | drops countries with any annual inflation above 40 percent |
+| Full | 160 | 4,749 | all available country-years |
+| Clean | 123 | 3,638 | drops countries with any annual inflation above 40 percent |
+
+Data note: Sierra Leone 2015 broad money growth is set to missing. The raw World Bank WDI source shows a unit break in that year (M2/GDP level series drops from ~13,000 to ~15, a redenomination/reporting artifact), producing a spurious -680% computed growth rate. The observation is excluded from all regressions via standard `dropna` handling.
 
 ## 3. Long-Run Country Averages
 
@@ -90,12 +92,12 @@ This is a descriptive within-country annual association. It is not a causal mone
 
 | Sample | Coefficient | p-value | N |
 |---|---:|---:|---:|
-| Full | 0.665 | 0.0002 | 4,750 |
-| Clean | 0.040 | 0.0621 | 3,639 |
+| Full | 0.855 | <0.001 | 4,749 |
+| Clean | 0.096 | <0.001 | 3,638 |
 
 Read:
 
-The full sample has a positive short-run association. In the clean sample, the coefficient collapses to about 0.04 and is not robustly significant. This is the central contrast with the long-run country-average result.
+The full sample has a strong positive short-run association. The clean-sample coefficient is much smaller than the full-sample one, confirming that high-inflation episodes drive much of the full-sample estimate. Even in the clean sample the association is statistically significant, but the magnitude is small relative to the long-run cross-country slope. This is the central contrast with the long-run country-average result.
 
 ## 5. Pre/Post-2008 Split
 
@@ -104,8 +106,8 @@ Same TWFE specification, clean sample only:
 | Era | Coefficient | p-value | N obs | Countries |
 |---|---:|---:|---:|---:|
 | 1991-2007 | 0.1128 | <0.001 | 1,764 | 119 |
-| 2008-2019 | 0.0005 | 0.8273 | 1,398 | 123 |
-| 2020-2024 | -0.0139 | 0.6547 | 477 | 107 |
+| 2008-2019 | -0.0063 | 0.711 | 1,397 | 123 |
+| 2020-2024 | -0.0139 | 0.655 | 477 | 107 |
 
 Read:
 
@@ -132,14 +134,14 @@ Notebook 02 keeps the robustness layer compact:
 
 | Check | Result |
 |---|---|
-| Exclude 2020-2021, full sample | coefficient remains about 0.664 |
-| Exclude 2020-2021, clean sample | coefficient remains about 0.040 |
-| Driscoll-Kraay, full sample | coefficient 0.665, p about 0.003 |
-| Driscoll-Kraay, clean sample | coefficient 0.040, p about 0.145 |
+| Exclude 2020-2021, full sample | coefficient remains about 0.858 |
+| Exclude 2020-2021, clean sample | coefficient remains about 0.099 |
+| Driscoll-Kraay, full sample | coefficient 0.855, p < 0.001 |
+| Driscoll-Kraay, clean sample | coefficient 0.096, p about 0.023 |
 
 Read:
 
-The clean-sample weakness is not just a COVID-year artifact. Wider Driscoll-Kraay inference also keeps the clean estimate non-robust.
+The clean-sample result is not a COVID-year artifact — excluding 2020-2021 leaves it essentially unchanged. Under Driscoll-Kraay inference the clean estimate remains significant (p=0.023), though with wider standard errors than clustered.
 
 ## 8. COVID Descriptive Evidence
 
@@ -172,15 +174,15 @@ This part is worth keeping, but only with careful wording.
 
 The old "IRF/shock response" language is too strong. The current version treats the estimates as reduced-form cumulative distributed-lag associations:
 
-| Horizon | Meaning |
-|---|---|
-| h=0 | same-year association |
-| h=0+1 | same-year plus one lag |
-| h=0+1+2 | same-year plus two lags |
+| Horizon | Cumulative estimate | 95% CI |
+|---|---:|---|
+| h=0 | 0.481 | [0.314, 0.649] |
+| h=0+1 | 0.777 | [0.622, 0.931] |
+| h=0+1+2 | 0.881 | [0.694, 1.068] |
 
 Read:
 
-The lag structure is interesting because annual money growth may not map into inflation only in the same calendar year. This belongs in the appendix unless developed into a cleaner extension.
+The same-year association (0.48) is smaller than the 3-year cumulative (0.88), which is close to the long-run between-country slope. This suggests money growth affects inflation over multiple years, not just within the same calendar year. Treat as appendix descriptive evidence only.
 
 ## 10. Exploratory Appendices
 
@@ -190,7 +192,29 @@ Notebook:
 
 `03_analysis_notebooks/03_short_run_lp_iv.ipynb`
 
-The IV results are directional only. Instruments fail the strong-IV threshold. Do not use these as causal evidence.
+Fixed sample: 3,390 rows. Two instruments tested.
+
+| Instrument | First-stage F | Verdict |
+|---|---:|---|
+| instrument_m2_external_level | 6.60 | above relevance gate (3.84), below strong-IV (10) |
+| instrument_m2_l1 | 2.99 | below relevance gate — discard |
+
+Under the primary instrument, inflation LP-IV coefficients across horizons:
+
+| Horizon | Coefficient | p-value | Holm p-value |
+|---|---:|---:|---:|
+| h=0 | 1.224 | 0.00017 | 0.00068 |
+| h=1 | 0.954 | 0.00099 | 0.00297 |
+| h=2 | 0.879 | 0.00441 | 0.00882 |
+| h=3 | 0.696 | 0.01153 | 0.01153 |
+
+GDP h=0: coefficient -0.172, p=0.190 — not significant.
+
+What this supports: in this panel, higher money growth is followed by higher inflation over the next 0–3 years. GDP short-run effect is not statistically clear. Evidence is directional and suggestive, not strong causal proof, because first-stage strength is moderate (F=6.60).
+
+IT stratification (adopters vs never-adopters) was attempted but both subgroups fail the relevance gate (adopters F=1.43, never-adopters F=3.21). Those results are archived and should not be interpreted.
+
+Do not use any of these as causal evidence.
 
 ### Inflation Targeting
 
@@ -198,7 +222,9 @@ Notebook:
 
 `03_analysis_notebooks/04_did_it_event_study.ipynb`
 
-The post-adoption slope shift is about -0.485. This is exploratory because inflation-targeting adoption is endogenous.
+The full-sample post-adoption slope shift is -0.512 (p<0.001); clean-sample -0.266 (p<0.001). This is exploratory because inflation-targeting adoption is endogenous.
+
+Cross-notebook read: Notebook 02 shows the aggregate short-run pass-through near zero post-2008. Notebook 02b shows the association accumulates over multiple years. Notebook 03 shows directional money→inflation prediction over h=0–3. Notebook 04 adds a structural feature: IT-adopting countries show much lower short-run M2→inflation slopes post-adoption. Together these notebooks point the same direction — pass-through exists, is slow, and is weaker in countries with IT frameworks. This is a consistent associational pattern across designs, not a causal chain.
 
 ### U.S. Appendix
 
@@ -206,12 +232,25 @@ Notebook:
 
 `03_analysis_notebooks/05_lucas_us_appendix.ipynb`
 
-This is Lucas (1980)-inspired descriptive evidence using U.S. FRED data and a 5-year moving average:
+This is Lucas (1980)-inspired descriptive evidence using U.S. FRED data. The filter matches Lucas (1980) eq. (1) exactly: two-sided exponential MA with β=0.9, boundary-normalised. Two estimations are run:
 
-| Relationship | Slope | Read |
-|---|---:|---|
-| M2 growth -> inflation | 0.474 | borderline |
-| M2 growth -> T-bill | 0.421 | directional only |
+**M1 (1960–2019, pre-2020 definitional break):**
+
+| Relationship | Slope | R² | Read |
+|---|---:|---:|---|
+| M1 growth → inflation | 0.079 | 0.003 | breaks down |
+| M1 growth → T-bill | -0.272 | 0.015 | breaks down |
+
+M1 fails because sweep-account distortions (1990s–2000s) and QE-era M1 surge (2009–2019) pull M1 growth away from inflation over the full sample.
+
+**M2 (1960–2024):**
+
+| Relationship | Slope | R² | Read |
+|---|---:|---:|---|
+| M2 growth → inflation | 1.041 | 0.623 | close to Lucas's theoretical 1.0 |
+| M2 growth → T-bill | 1.357 | 0.377 | directional |
+
+With the correct Lucas filter, M2 produces a slope near 1.0 — the key Lucas (1980) prediction. Pre-2008 slope ≈ 0.87; post-2008 slope ≈ 0.39 (QE era weakening, consistent with Notebook 02).
 
 The main project frame is still Lucas (1996) / McCandless-Weber, not Lucas (1980).
 
@@ -254,8 +293,8 @@ Forbidden claims:
 | `it_event_time_inflation.png` | inflation-targeting event-time chart |
 | `it_slope_probe_coefficients.png` | inflation-targeting slope probe |
 | `us_m2_inflation_two_eras.png` | U.S. pre/post-2008 scatter |
-| `lucas_us_inflation.png` | U.S. M2 vs inflation, 5-year moving average |
-| `lucas_us_tbill.png` | U.S. M2 vs T-bill, 5-year moving average |
+| `lucas_m1_scatter.png` | U.S. M1 vs inflation, Lucas filter β=0.9 |
+| `lucas_m2_scatter.png` | U.S. M2 vs inflation and T-bill, Lucas filter β=0.9 |
 
 ## 13. Conclusion
 

@@ -1,2 +1,5 @@
-series,sample,n_years,filter,slope_vs_inflation,r2_vs_inflation,slope_vs_tbill,r2_vs_tbill
-"M2 (US, FRED)",1960–2024,65,5yr centred MA,0.4737,0.1955,0.421,0.0924
+aggregate,sample,relationship,slope,R2,p_HAC,n
+M1,1962-2017,M1->Inflation,0.0786,0.0028,0.857,56
+M1,1962-2017,M1->T-bill,-0.2725,0.0152,0.6827,56
+M2,1962-2022,M2->Inflation,1.041,0.6226,0.0,61
+M2,1962-2022,M2->T-bill,1.3573,0.3771,0.0003,61

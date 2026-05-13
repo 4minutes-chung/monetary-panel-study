@@ -12,8 +12,8 @@ This is a descriptive empirical audit, not a causal policy paper.
 |---|---:|---|
 | Long-run country averages, full sample | 0.952 | near one-for-one |
 | Long-run country averages, clean sample | 0.524 | positive, smaller outside high-inflation episodes |
-| Short-run TWFE, full sample | 0.665 | driven partly by high-inflation episodes |
-| Short-run TWFE, clean sample | 0.040 | small and not robustly significant |
+| Short-run TWFE, full sample | 0.855 | driven partly by high-inflation episodes |
+| Short-run TWFE, clean sample | 0.096 | smaller but statistically significant |
 
 The useful tension is simple: countries with persistently higher broad money growth have higher long-run inflation, but year-to-year broad money growth does not map cleanly into year-to-year inflation in modern low-inflation regimes, especially after 2008.
 
