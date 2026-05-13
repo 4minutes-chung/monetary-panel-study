@@ -1,0 +1,2 @@
+countries,treated_countries,nobs,coef_m2_growth,p_m2_growth,coef_it_m2,p_it_m2,coef_post_treated_m2,p_post_treated_m2,implied_slope_it_pre,implied_slope_it_post
+160,27,4749,0.8615009657591755,0.0,-0.011113034831472367,0.9144895238184121,-0.46052446748952375,1.2479639914797502e-06,0.850387930927703,0.3898634634381793

@@ -1,51 +1,80 @@
 # Money Growth and Inflation After QE and COVID
 
-160-country annual macro panel, 1991-2024.
+**160-country annual macro panel, 1991-2024.**
 
-Subtitle: long-run quantity-theory evidence survives; short-run within-country pass-through weakens after 2008.
+*Long-run quantity-theory evidence survives; short-run within-country pass-through weakens after 2008.*
 
-This is a descriptive empirical audit, not a causal policy paper.
+> **Note:** This is a descriptive empirical audit, not a causal policy paper.
 
-## Main Finding
+---
 
-| Question | Estimate | Read |
+## 1. The Core Contrast: Between vs. Within
+Countries with persistently faster money growth have faster average inflation (**Between**). However, year-to-year deviations in money growth barely predict same-year inflation deviations in modern clean samples (**Within**).
+
+<img src="04_current_results/figures/between_within_decomposition.png" width="800">
+
+## 2. The Short-Run Collapse Post-2008
+The annual within-country association was clearly visible before 2008, but drops to near-zero in the post-QE era.
+
+<img src="04_current_results/figures/pre_post_2008_coef_plot.png" width="600">
+
+## 3. Prior Inflation Regime Matters
+The descriptive slope is much larger in environments where prior-year inflation was already high, mirroring the "clean vs. full" sample split.
+
+<img src="04_current_results/figures/regime_split_coef_plot.png" width="600">
+
+## 4. COVID Stress Evidence
+During the 2020-2023 COVID episode, cross-country money growth and inflation moved together descriptively.
+
+<img src="04_current_results/figures/covid_money_inflation_scatter.png" width="600">
+
+---
+
+## Exploratory Appendices
+
+### Multi-Year Pass-Through (Distributed Lag)
+Pass-through isn't just same-year. The association accumulates over multiple years, eventually approaching the long-run cross-country slope.
+
+<img src="04_current_results/figures/distributed_lag_cumulative_association.png" width="600">
+
+### Inflation Targeting Explores The Drop
+Countries that adopted Inflation Targeting saw a sharp drop in their within-country M2→Inflation slope post-adoption.
+
+<img src="04_current_results/figures/it_slope_probe_coefficients.png" width="600">
+
+### The U.S. Perspective: Two Eras
+Applying the classic Lucas (1980) filter to U.S. M2 shows the same story: a strong historical relationship that severely flattens post-2008.
+
+<img src="04_current_results/figures/us_m2_inflation_two_eras.png" width="600">
+
+---
+
+## Main Numeric Results
+
+| Question | Coefficient | Interpretation |
 |---|---:|---|
-| Long-run country averages, full sample | 0.952 | near one-for-one |
-| Long-run country averages, clean sample | 0.524 | positive, smaller outside high-inflation episodes |
-| Short-run TWFE, full sample | 0.855 | driven partly by high-inflation episodes |
-| Short-run TWFE, clean sample | 0.096 | smaller but statistically significant |
-| Regime split — low prior inflation (≤5%) | 0.053 | near zero in modern low-inflation environments |
-| Regime split — extreme prior inflation (>40%) | 0.893 | near one-for-one in high-inflation regimes |
+| **Long-run cross-country** (Full) | **0.952** | Near one-for-one over 30 years |
+| **Long-run cross-country** (Clean) | **0.524** | Strong and positive even without hyperinflation |
+| **Short-run within-country** (Full) | **0.855** | Driven heavily by extreme-inflation years |
+| **Short-run within-country** (Clean)| **0.096** | Weakened annual pass-through |
 
-The useful tension is simple: countries with persistently higher broad money growth have higher long-run inflation, but year-to-year broad money growth does not map cleanly into year-to-year inflation in modern low-inflation regimes, especially after 2008. The short-run pass-through is state-dependent: it is near zero when prior-year inflation is low and near one-for-one when it is high.
+---
 
-## Notebooks
+## Data & Reproducibility
 
-Run in order:
+- **Core Panel:** `02_data/analysis_ready/macro_growth_merged.csv` (160 countries, 4,750 rows).
+- **Codebase:** All analyses are fully contained and executable within `03_analysis_notebooks/`.
+- **Final Memo:** [`money_inflation_audit_report.pdf`](money_inflation_audit_report.pdf).
 
-| Notebook | Role |
-|---|---|
-| `03_analysis_notebooks/01_lucas96_mcweber_replication.ipynb` | Lucas (1996) / McCandless-Weber long-run country-average update |
-| `03_analysis_notebooks/02_money_inflation_twfe.ipynb` | Main short-run TWFE notebook: full/clean sample, pre/post-2008, compact robustness, outlier robustness, inflation-regime split, between-vs-within |
-| `03_analysis_notebooks/02b_money_inflation_exploratory.ipynb` | Appendix diagnostics and cumulative distributed-lag scaffold |
-| `03_analysis_notebooks/03_short_run_lp_iv.ipynb` | LP-IV appendix, directional only |
-| `03_analysis_notebooks/04_did_it_event_study.ipynb` | Inflation-targeting appendix, exploratory only |
-| `03_analysis_notebooks/05_lucas_us_appendix.ipynb` | Lucas (1980)-inspired U.S. appendix |
+Environment:
 
-## Data
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-- `02_data/analysis_ready/macro_growth_merged.csv` - main cleaned panel.
-- `02_data/DATA_PROVENANCE.md` - source map for checked-in data snapshots.
-- `02_data/raw/worldbank_wdi_core_1991_2024.csv` - World Bank WDI source snapshot.
-- `02_data/raw/fred_*.csv` - U.S. FRED source snapshots.
-- `02_data/supporting/wb_controls_1991_2024.csv` - World Bank control variables.
-- `02_data/supporting/bartik_instruments_1991_2024.csv` - appendix IV support file.
-- `02_data/supporting/intl_lending_rates.csv` - World Bank lending-rate snapshot.
-- `02_data/supporting/it_adoption_dates.csv` - inflation-targeting adoption dates.
-
-Data files are checked-in CSV snapshots. This repo intentionally contains no standalone Python scripts.
-
-## Rebuild
+Notebook execution order:
 
 ```bash
 jupyter nbconvert --to notebook --execute --inplace 03_analysis_notebooks/01_lucas96_mcweber_replication.ipynb
@@ -56,15 +85,4 @@ jupyter nbconvert --to notebook --execute --inplace 03_analysis_notebooks/04_did
 jupyter nbconvert --to notebook --execute --inplace 03_analysis_notebooks/05_lucas_us_appendix.ipynb
 ```
 
-## Claim Discipline
-
-Safe claims:
-
-- Broad money growth and inflation remain strongly associated across countries over long horizons.
-- The annual within-country association is much weaker in the clean sample.
-- The clean-sample short-run association is visible before 2008 and near zero afterward.
-- Short-run pass-through is state-dependent: near zero when prior-year inflation is low, near one-for-one when it is high.
-- COVID is a descriptive stress episode, not a causal design.
-- IV and inflation-targeting results are exploratory appendices.
-
-Do not claim that QE caused low inflation, COVID money growth alone caused 2021-2023 inflation, or inflation targeting causally reduced pass-through.
+Data snapshots are checked into `02_data/`; regenerated figures and tables write to `04_current_results/`.

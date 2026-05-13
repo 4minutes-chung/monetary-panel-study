@@ -1,0 +1,8 @@
+metric,value
+inflation_sig_horizons_5pct_unadjusted,4
+inflation_sig_horizons_5pct_holm,4
+gdp_sig_horizons_5pct,0
+inflation_min_first_stage_stat_primary,5.963170277510777
+inflation_relevance_gate_all_horizons,True
+inflation_strong_iv_all_horizons,False
+fixed_sample_rows,3382
