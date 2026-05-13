@@ -19,14 +19,14 @@
 
 \textbf{Objective:} This is an empirical setup to audit the quantity theory of money using a 160-country macro panel (1991--2024). The purpose is to decompose the broad money-inflation relationship into two distinct estimands: the long-run cross-country average and the short-run annual within-country pass-through. The core finding is that while the long-run cross-country relationship remains near one-for-one, the clean short-run within-country pass-through collapses to near-zero post-2008.
 
-\section*{1. Data Engineering \& Workflow}
+\section*{1. Data and Sample Construction}
 
-The construction of the unbalanced panel involved merging raw World Bank WDI variables and managing severe country-specific data irregularities. This project prioritizes descriptive reliability over sample size maximization. Key data governance decisions included:
+The construction of the unbalanced panel involved merging raw World Bank WDI variables and managing severe country-specific data irregularities. This project prioritizes descriptive reliability over sample size maximization. The main sample restrictions and data checks were:
 
 \begin{itemize}
     \item \textbf{Outlier Mitigation (The 40\% Threshold):} I trimmed the primary analytical sample to exclude countries with any year of inflation exceeding 40\%. This prevents hyperinflationary regimes (which mechanically exhibit a 1:1 money-inflation mapping) from dominating the aggregate slope and obscuring the dynamics of stable-inflation economies.
     \item \textbf{Panel Consistency ($n \ge 30$):} For long-run averages, I imposed an $n \ge 30$ threshold to ensure sufficient time-series depth for country-level aggregation.
-    \item \textbf{Unit Break Correction:} The raw WDI data contained a spurious $-680\%$ M2 growth rate for Sierra Leone in 2015. Investigation revealed this was a reporting/redenomination artifact (the M2/GDP level series dropped from $\sim$13,000 to $\sim$15). This observation was explicitly scrubbed via standard \texttt{dropna} handling.
+    \item \textbf{Data Quality Note:} The raw WDI data contained a spurious $-680\%$ M2 growth rate for Sierra Leone in 2015. Investigation revealed this was a reporting/redenomination artifact (the M2/GDP level series dropped from $\sim$13,000 to $\sim$15). This observation was excluded.
 \end{itemize}
 
 \section*{2. The Empirical Contrast}
