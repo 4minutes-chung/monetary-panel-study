@@ -64,7 +64,7 @@ Applying the classic Lucas (1980) filter to U.S. M2 shows the same story: a stro
 
 - **Core Panel:** `02_data/analysis_ready/macro_growth_merged.csv` (160 countries, 4,750 rows).
 - **Codebase:** All analyses are fully contained and executable within `03_analysis_notebooks/`.
-- **Final Memo:** [`money_inflation_audit_report.pdf`](money_inflation_audit_report.pdf).
+- **Final Memo:** [`money_inflation_audit_report.pdf`](money_inflation_audit_report.pdf) from [`money_inflation_audit_report.tex`](money_inflation_audit_report.tex).
 
 Environment:
 
