@@ -20,6 +20,7 @@ The answer is:
 2. Short-run within-country association is much weaker in clean low-inflation samples.
 3. The short-run clean-sample association weakens sharply after 2008.
 4. COVID is useful as descriptive stress evidence, not causal identification.
+5. Short-run pass-through is regime-dependent: near zero in low prior-year inflation environments, near one-for-one when prior-year inflation is high.
 
 ## 2. Data
 
@@ -109,6 +110,8 @@ Same TWFE specification, clean sample only:
 | 2008-2019 | -0.0063 | 0.711 | 1,397 | 123 |
 | 2020-2024 | -0.0139 | 0.655 | 477 | 107 |
 
+Figure: `04_current_results/figures/pre_post_2008_coef_plot.png`
+
 Read:
 
 The short-run within-country association is visible before 2008 and near zero afterward. This supports the project subtitle: long-run evidence survives, but short-run pass-through weakens after 2008.
@@ -143,7 +146,42 @@ Read:
 
 The clean-sample result is not a COVID-year artifact — excluding 2020-2021 leaves it essentially unchanged. Under Driscoll-Kraay inference the clean estimate remains significant (p=0.023), though with wider standard errors than clustered.
 
-## 8. COVID Descriptive Evidence
+## 8. Outlier Robustness
+
+Same TWFE, five sample restrictions:
+
+| Spec | Coefficient | N |
+|---|---:|---:|
+| Full sample | 0.855 | 4,749 |
+| Clean sample | 0.096 | 3,638 |
+| Winsorized 1/99 (m2 and inflation) | 0.422 | 4,749 |
+| Exclude \|m2_growth\| > 100% | 0.328 | 4,717 |
+| Exclude inflation > 40% | 0.114 | 4,621 |
+
+Read:
+
+Specs 3–4 trim the regressor; the coefficient falls toward the clean-sample range but stays positive. Specs 5 and the clean sample restrict the outcome distribution — DV truncation mechanically compresses slopes and reflects genuine heterogeneity between high- and low-inflation observations, not just outlier influence. The pattern is not an artifact of a handful of extreme country-years.
+
+## 9. Inflation-Regime Split
+
+Same notebook. Regime bins defined on prior-year inflation to avoid conditioning on the outcome:
+
+| Prior-year inflation regime | Coefficient | SE | p-value | N |
+|---|---:|---:|---:|---:|
+| Low (≤5%) | 0.053 | 0.012 | <0.001 | 2,540 |
+| Moderate (5–20%) | 0.108 | 0.028 | <0.001 | 1,720 |
+| High (20–40%) | 0.287 | 0.159 | 0.073 | 205 |
+| Extreme (>40%) | 0.893 | 0.103 | <0.001 | 124 |
+
+Figure: `04_current_results/figures/regime_split_coef_plot.png`
+
+Note: Extreme regime has 36 clusters — confidence interval is less reliable.
+
+Read:
+
+The slope climbs from near zero in low-inflation environments to near one-for-one when prior-year inflation is extreme. The clean-sample coefficient of 0.096 reflects a sample that is mostly in the low regime. This is consistent with the De Grauwe-Polan pattern: the quantity theory relationship is more visible when inflation is already elevated. All estimates are descriptive associations; not causal.
+
+## 10. COVID Descriptive Evidence
 
 COVID is not a causal design in this project.
 
@@ -160,7 +198,7 @@ Read:
 
 The COVID period shows a positive cross-country money-inflation association. This is consistent with a monetary interpretation, but it cannot separate broad money from fiscal transfers, supply shocks, exchange rates, or expectations.
 
-## 9. Distributed-Lag Appendix
+## 11. Distributed-Lag Appendix
 
 Notebook:
 
@@ -184,7 +222,7 @@ Read:
 
 The same-year association (0.48) is smaller than the 3-year cumulative (0.88), which is close to the long-run between-country slope. This suggests money growth affects inflation over multiple years, not just within the same calendar year. Treat as appendix descriptive evidence only.
 
-## 10. Exploratory Appendices
+## 12. Exploratory Appendices
 
 ### LP-IV
 
@@ -254,13 +292,15 @@ With the correct Lucas filter, M2 produces a slope near 1.0 — the key Lucas (1
 
 The main project frame is still Lucas (1996) / McCandless-Weber, not Lucas (1980).
 
-## 11. Claim Tiers
+## 13. Claim Tiers
 
 | Component | Claim tier | Limitation |
 |---|---|---|
 | Long-run country averages | descriptive | no causal design |
 | TWFE short-run association | associational | no causal identification |
 | Pre/post-2008 split | descriptive timing | does not identify QE effect |
+| Outlier robustness | diagnostic | DV truncation compresses slopes mechanically |
+| Inflation-regime split | descriptive heterogeneity | lagged bins; not a causal regime model |
 | COVID scatter | descriptive stress evidence | fiscal/supply/expectations confounds |
 | Distributed lag | appendix scaffold | reduced-form association only |
 | LP-IV | exploratory | weak instruments |
@@ -274,12 +314,12 @@ Forbidden claims:
 - "Inflation targeting causally reduced pass-through."
 - "The IV results identify causal monetary transmission."
 
-## 12. Data And Code Provenance
+## 14. Data And Code Provenance
 
 | Notebook | Content |
 |---|---|
 | `01_lucas96_mcweber_replication.ipynb` | long-run country-average benchmark |
-| `02_money_inflation_twfe.ipynb` | main short-run TWFE spine |
+| `02_money_inflation_twfe.ipynb` | main short-run TWFE spine; pre/post-2008 plot; outlier robustness; regime split |
 | `02b_money_inflation_exploratory.ipynb` | appendix diagnostics and cumulative lag scaffold |
 | `03_short_run_lp_iv.ipynb` | LP-IV appendix |
 | `04_did_it_event_study.ipynb` | inflation-targeting appendix |
@@ -288,6 +328,8 @@ Forbidden claims:
 | Figure | Description |
 |---|---|
 | `between_within_decomposition.png` | country-average vs within-country annual association |
+| `pre_post_2008_coef_plot.png` | pre/post-2008 coefficient plot with 95% CI |
+| `regime_split_coef_plot.png` | M2→inflation slope by prior-year inflation regime |
 | `distributed_lag_cumulative_association.png` | cumulative distributed-lag association |
 | `covid_money_inflation_scatter.png` | descriptive COVID cross-country scatter |
 | `it_event_time_inflation.png` | inflation-targeting event-time chart |
@@ -296,10 +338,10 @@ Forbidden claims:
 | `lucas_m1_scatter.png` | U.S. M1 vs inflation, Lucas filter β=0.9 |
 | `lucas_m2_scatter.png` | U.S. M2 vs inflation and T-bill, Lucas filter β=0.9 |
 
-## 13. Conclusion
+## 15. Conclusion
 
 The project's useful contribution is not a new causal macro design. It is a clean empirical contrast:
 
-> Long-run cross-country money-inflation evidence remains strong through 2024, while the clean short-run within-country association weakens sharply after 2008.
+> Long-run cross-country money-inflation evidence remains strong through 2024, while the clean short-run within-country association weakens sharply after 2008. Short-run pass-through is stronger in high prior-year inflation regimes and near zero in low-inflation environments.
 
 That is enough for a portfolio project if the final presentation stays disciplined.

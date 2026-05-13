@@ -14,8 +14,10 @@ This is a descriptive empirical audit, not a causal policy paper.
 | Long-run country averages, clean sample | 0.524 | positive, smaller outside high-inflation episodes |
 | Short-run TWFE, full sample | 0.855 | driven partly by high-inflation episodes |
 | Short-run TWFE, clean sample | 0.096 | smaller but statistically significant |
+| Regime split — low prior inflation (≤5%) | 0.053 | near zero in modern low-inflation environments |
+| Regime split — extreme prior inflation (>40%) | 0.893 | near one-for-one in high-inflation regimes |
 
-The useful tension is simple: countries with persistently higher broad money growth have higher long-run inflation, but year-to-year broad money growth does not map cleanly into year-to-year inflation in modern low-inflation regimes, especially after 2008.
+The useful tension is simple: countries with persistently higher broad money growth have higher long-run inflation, but year-to-year broad money growth does not map cleanly into year-to-year inflation in modern low-inflation regimes, especially after 2008. The short-run pass-through is state-dependent: it is near zero when prior-year inflation is low and near one-for-one when it is high.
 
 ## Notebooks
 
@@ -24,7 +26,7 @@ Run in order:
 | Notebook | Role |
 |---|---|
 | `03_analysis_notebooks/01_lucas96_mcweber_replication.ipynb` | Lucas (1996) / McCandless-Weber long-run country-average update |
-| `03_analysis_notebooks/02_money_inflation_twfe.ipynb` | Main short-run TWFE notebook: full/clean sample, pre/post-2008, compact robustness, between-vs-within |
+| `03_analysis_notebooks/02_money_inflation_twfe.ipynb` | Main short-run TWFE notebook: full/clean sample, pre/post-2008, compact robustness, outlier robustness, inflation-regime split, between-vs-within |
 | `03_analysis_notebooks/02b_money_inflation_exploratory.ipynb` | Appendix diagnostics and cumulative distributed-lag scaffold |
 | `03_analysis_notebooks/03_short_run_lp_iv.ipynb` | LP-IV appendix, directional only |
 | `03_analysis_notebooks/04_did_it_event_study.ipynb` | Inflation-targeting appendix, exploratory only |
@@ -61,6 +63,7 @@ Safe claims:
 - Broad money growth and inflation remain strongly associated across countries over long horizons.
 - The annual within-country association is much weaker in the clean sample.
 - The clean-sample short-run association is visible before 2008 and near zero afterward.
+- Short-run pass-through is state-dependent: near zero when prior-year inflation is low, near one-for-one when it is high.
 - COVID is a descriptive stress episode, not a causal design.
 - IV and inflation-targeting results are exploratory appendices.
 
