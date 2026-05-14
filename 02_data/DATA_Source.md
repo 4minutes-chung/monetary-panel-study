@@ -2,7 +2,7 @@
 
 This note documents which external data sources are used in the project, and how each source is used in the analysis.
 
-## 1. Main Analysis Data (used for core findings)
+## 1. Main Analysis Data
 
 Primary source: **World Bank, World Development Indicators (WDI)**  
 Coverage in this project: cross-country annual panel, 1991-2024.
