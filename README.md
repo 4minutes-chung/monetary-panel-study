@@ -40,7 +40,7 @@ This nonlinearity explains most of the gap between the full-sample (0.855) and c
 
 ### COVID Stress Evidence (Short-run association)
 
-During the 2020-2023 COVID episode, cross-country money growth and inflation moved together descriptively. Countries that printed more money experienced higher inflation.
+During the 2020-2023 COVID episode, cross-country money growth and inflation moved together descriptively. Countries with higher broad-money growth also tended to experience higher inflation.
 
 <img src="04_current_results/figures/covid_money_inflation_scatter.png" width="600">
 
