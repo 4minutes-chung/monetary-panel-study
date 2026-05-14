@@ -78,12 +78,17 @@ M1 definition changed in 2020 and thus pivot to M2.
 
 ---
 
-## Data Sources
+## Document and Files
+
+- **Memo/Write-up:** `money_inflation_write_up.pdf` key findings write-up on pages 1-3, related graphs and tables in the appendix.
 
 - **Core Panel:** `02_data/analysis_ready/macro_growth_merged.csv` Data are downloaded from World Bank, World Development Indicators (WDI).
+
 - **Data Source:** `02_data/DATA_Source.md` describes the details of data and variables used.
+
 - **Codebase:** All analyses are within `03_analysis_notebooks/`.
-- **Memo/Write-up:** `money_inflation_write_up.pdf` explains the key findings on pages 1-3, then provides a Chartbook for all the graphs and tables.
+
+- **Graphs and Tables:** All graphs and tables are within `04_current_results/`.
 
 ---
 
@@ -91,5 +96,8 @@ M1 definition changed in 2020 and thus pivot to M2.
 
 - The empirical design and findings are consistent with recent regime-dependence arguments by Borio et al. (2024) and the IT-anchoring dynamics noted by Teles et al. (2016).
 
-- Sargent & Surico (2011) already showed that the Lucas-style unit slope is unstable and disappeared in the U.S. after 1984 (the Great Moderation).
-- And Borio et al. (2024) argues that the link has become "virtually non-existent" in low-inflation environments.
+- Sargent & Surico (2011) mentioned that Lucas-style unit slope is unstable and disappeared in the U.S. after 1984 (the Great Moderation).
+
+- Borio et al. (2024) argues that the link has become "virtually non-existent" in low-inflation environments.
+
+---
